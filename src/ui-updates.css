@@ -416,9 +416,9 @@
 }
 
 .status.preferred {
-  border-color: #9fc4a5;
-  background: #e5f2e4;
-  color: #2e673b;
+  border-color: #9fd4b1;
+  background: #e7f6ec;
+  color: #236b42;
 }
 
 .status.active.unavailable {
@@ -440,8 +440,8 @@
 }
 
 .status.active.preferred {
-  border-color: #2e6740;
-  background: #3f7d50;
+  border-color: #237348;
+  background: #2f8f5b;
   color: white;
 }
 
@@ -479,7 +479,7 @@
 }
 
 .response-choices > span.preferred {
-  background: #3f7d50;
+  background: #2f8f5b;
   color: white;
 }
 
