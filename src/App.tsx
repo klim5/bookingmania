@@ -1,0 +1,157 @@
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Copy, Crown, Link2, MapPin, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
+import type { EventPlan, Person, Slot, Status } from './types'
+import { eventUrl, getEvent, makeId, saveEvent } from './store'
+
+type Route = { page: 'home' } | { page: 'create' } | { page: 'event'; id: string }
+const route = (): Route => {
+  const parts = location.hash.slice(1).split('/').filter(Boolean)
+  if (parts[0] === 'event' && parts[1]) return { page: 'event', id: parts[1] }
+  if (parts[0] === 'create') return { page: 'create' }
+  return { page: 'home' }
+}
+
+const fmtDate = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
+const fmtLong = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${date}T12:00:00`))
+const fmtTime = (time: string) => new Date(`2020-01-01T${time}`).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
+
+function Brand() {
+  return <button className="brand" onClick={() => location.hash = ''}><span><Sparkles size={18} /></span> Gather</button>
+}
+
+function Header() {
+  return <header><Brand /><span className="tagline">Make time, together.</span></header>
+}
+
+function Home() {
+  return <main className="home">
+    <section className="hero">
+      <div className="eyebrow"><span className="pulse" /> Less planning. More gathering.</div>
+      <h1>Find the time that<br /><em>works for everyone.</em></h1>
+      <p className="hero-copy">Create an event, invite your people, and see the perfect time emerge — without the endless group chat.</p>
+      <button className="primary big" onClick={() => location.hash = '/create'}>Create an event <ArrowRight size={19} /></button>
+      <p className="micro">No account needed · Takes less than a minute</p>
+    </section>
+    <section className="how">
+      <article><span>1</span><div><CalendarDays /><h3>Suggest some times</h3><p>Add a few options that work for you.</p></div></article>
+      <article><span>2</span><div><Link2 /><h3>Share one simple link</h3><p>Everyone picks their name and responds.</p></div></article>
+      <article><span>3</span><div><Check /><h3>Book the best time</h3><p>See the overlap and lock it in.</p></div></article>
+    </section>
+  </main>
+}
+
+function Create() {
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const [title, setTitle] = useState('')
+  const [creator, setCreator] = useState('')
+  const [locationName, setLocationName] = useState('')
+  const [note, setNote] = useState('')
+  const [people, setPeople] = useState<Person[]>([])
+  const [personName, setPersonName] = useState('')
+  const [slots, setSlots] = useState<Slot[]>([{ id: makeId(), date: tomorrow, start: '18:00', end: '19:30' }])
+  const [error, setError] = useState('')
+
+  const addPerson = () => {
+    const name = personName.trim()
+    if (!name || people.some(p => p.name.toLowerCase() === name.toLowerCase())) return
+    setPeople([...people, { id: makeId(), name, optional: false }]); setPersonName('')
+  }
+  const create = () => {
+    if (!title.trim() || !creator.trim() || !people.length || !slots.length || slots.some(s => !s.date || !s.start || !s.end)) {
+      setError('Add an event name, your name, at least one guest and one complete time option.'); return
+    }
+    const id = makeId()
+    const host: Person = { id: makeId(), name: creator.trim(), optional: false }
+    const hostAvailability = Object.fromEntries(slots.map(slot => [slot.id, 'available' as Status]))
+    const plan: EventPlan = { id, title: title.trim(), creator: creator.trim(), location: locationName.trim(), note: note.trim(), people: [host, ...people], slots, responses: { [host.id]: hostAvailability }, createdAt: new Date().toISOString() }
+    saveEvent(plan); localStorage.setItem(`gather:host:${id}`, 'true'); location.hash = `/event/${id}`
+  }
+  return <main className="create-shell">
+    <button className="back" onClick={() => history.back()}><ArrowLeft size={17} /> Back</button>
+    <div className="create-head"><div className="step">CREATE AN EVENT</div><h1>What are we planning?</h1><p>Start with the basics. You can share the invite as soon as you're done.</p></div>
+    <div className="form-grid">
+      <section className="card form-card">
+        <h2><span className="icon-box coral"><Sparkles /></span> Event details</h2>
+        <label>Event name <b>*</b><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Sunday dinner, team offsite…" autoFocus /></label>
+        <label>Your name <b>*</b><input value={creator} onChange={e => setCreator(e.target.value)} placeholder="How guests will see you" /></label>
+        <label>Location <span>OPTIONAL</span><div className="input-icon"><MapPin /><input value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Add a place or video link" /></div></label>
+        <label>Note <span>OPTIONAL</span><textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Anything your guests should know?" /></label>
+      </section>
+      <section className="card form-card">
+        <h2><span className="icon-box blue"><Users /></span> Who's invited?</h2>
+        <p className="section-copy">Add everyone you'd like to join. They'll choose their name when responding.</p>
+        <div className="add-row"><input value={personName} onChange={e => setPersonName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addPerson()} placeholder="Type a name" /><button onClick={addPerson}><Plus size={18} /> Add</button></div>
+        <div className="people-list">{people.map((person, i) => <div className="person" key={person.id}><span className="avatar">{person.name[0].toUpperCase()}</span><strong>{person.name}</strong><label className="optional"><input type="checkbox" checked={person.optional} onChange={() => setPeople(people.map(p => p.id === person.id ? { ...p, optional: !p.optional } : p))} /> Optional</label><button className="icon-button" onClick={() => setPeople(people.filter(p => p.id !== person.id))}><X size={17} /></button></div>)}</div>
+        {!people.length && <div className="empty-mini"><Users /><span>Your guest list will appear here</span></div>}
+      </section>
+      <section className="card form-card wide">
+        <h2><span className="icon-box green"><CalendarDays /></span> Time options</h2>
+        <p className="section-copy">Give everyone a few good options to choose from.</p>
+        <div className="slots">{slots.map((slot, index) => <div className="slot-edit" key={slot.id}><span className="slot-num">{index + 1}</span><label>Date<input type="date" value={slot.date} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, date: e.target.value } : s))} /></label><label>Starts<input type="time" value={slot.start} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, start: e.target.value } : s))} /></label><label>Ends<input type="time" value={slot.end} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, end: e.target.value } : s))} /></label><button className="icon-button trash" disabled={slots.length === 1} onClick={() => setSlots(slots.filter(s => s.id !== slot.id))}><Trash2 size={18} /></button></div>)}</div>
+        <button className="secondary add-time" onClick={() => setSlots([...slots, { id: makeId(), date: tomorrow, start: '18:00', end: '19:30' }])}><Plus size={17} /> Add another time</button>
+      </section>
+    </div>
+    {error && <p className="error">{error}</p>}
+    <div className="create-action"><button className="primary big" onClick={create}>Create & share <ArrowRight size={19} /></button></div>
+  </main>
+}
+
+function StatusButton({ status, active, onClick }: { status: Status; active: boolean; onClick: () => void }) {
+  const icons = { available: <Check />, tentative: <span>?</span>, unavailable: <X /> }
+  const labels = { available: 'Available', tentative: 'If needed', unavailable: "Can't make it" }
+  return <button className={`status ${status} ${active ? 'active' : ''}`} onClick={onClick}>{icons[status]}<span>{labels[status]}</span></button>
+}
+
+function EventPage({ id }: { id: string }) {
+  const [event, setEvent] = useState<EventPlan | null>(() => getEvent(id))
+  const [selectedPerson, setSelectedPerson] = useState('')
+  const [draft, setDraft] = useState<Record<string, Status>>({})
+  const [copied, setCopied] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const host = localStorage.getItem(`gather:host:${id}`) === 'true'
+
+  useEffect(() => { if (selectedPerson && event) setDraft(event.responses[selectedPerson] || {}) }, [selectedPerson, event])
+  const scores = useMemo(() => event?.slots.map(slot => {
+    const required = event.people.filter(p => !p.optional)
+    const available = required.filter(p => event.responses[p.id]?.[slot.id] === 'available').length
+    const blocked = required.filter(p => event.responses[p.id]?.[slot.id] === 'unavailable').length
+    return { slot, available, blocked, total: required.length }
+  }) || [], [event])
+  if (!event) return <main className="not-found"><CalendarDays /><h1>We couldn't find that event</h1><p>The link may be incorrect, or this demo event was created on another device.</p><button className="primary" onClick={() => location.hash = ''}>Go home</button></main>
+
+  const copy = async () => { await navigator.clipboard.writeText(eventUrl(id)); setCopied(true); setTimeout(() => setCopied(false), 1800) }
+  const submit = () => { const updated = { ...event, responses: { ...event.responses, [selectedPerson]: draft } }; saveEvent(updated); setEvent(updated); setSaved(true); setTimeout(() => setSaved(false), 1800) }
+  const responded = event.people.filter(p => event.responses[p.id]).length
+  const bestId = [...scores].sort((a, b) => a.blocked - b.blocked || b.available - a.available)[0]?.slot.id
+
+  return <main className="event-shell">
+    <div className="event-top"><Brand /><button className="share" onClick={copy}>{copied ? <Check /> : <Copy />} {copied ? 'Copied!' : 'Copy invite link'}</button></div>
+    <section className="event-hero">
+      <div><div className="eyebrow"><CalendarDays size={14} /> YOU'RE INVITED</div><h1>{event.title}</h1><p className="hosted">Hosted by {event.creator}</p></div>
+      <div className="event-meta">{event.location && <span><MapPin /> {event.location}</span>}<span><Users /> {event.people.length} people invited</span></div>
+      {event.note && <div className="note">“{event.note}”</div>}
+    </section>
+
+    {!host && <section className="response card">
+      <div className="response-head"><div><span className="step">YOUR AVAILABILITY</span><h2>Which one are you?</h2></div><span className="progress-count">{responded} of {event.people.length} replied</span></div>
+      <select value={selectedPerson} onChange={e => setSelectedPerson(e.target.value)}><option value="">Choose your name…</option>{event.people.map(p => <option key={p.id} value={p.id}>{p.name}{p.optional ? ' (optional)' : ''}</option>)}</select>
+      {selectedPerson && <div className="availability"><p>Tap your availability for each option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'tentative', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<button className="primary submit" disabled={Object.keys(draft).length !== event.slots.length} onClick={submit}>{saved ? <><Check /> Saved!</> : <>Save my response <ChevronRight /></>}</button></div>}
+    </section>}
+
+    {host && <section className="results">
+      <div className="results-head"><div><span className="step">HOST VIEW</span><h2>Find your best time</h2><p>{responded} of {event.people.length} people have responded.</p></div><button className="share mobile-hide" onClick={copy}><Copy /> Share again</button></div>
+      <div className="summary-grid">{scores.map(score => <article className={`result-card ${score.slot.id === bestId ? 'best' : ''}`} key={score.slot.id}>{score.slot.id === bestId && <div className="best-label"><Crown /> Best option</div>}<div className="date-block"><span>{fmtDate(score.slot.date).split(' ')[0]}</span><strong>{new Date(`${score.slot.date}T12:00`).getDate()}</strong><small>{new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(new Date(`${score.slot.date}T12:00`))}</small></div><div className="result-info"><h3>{fmtTime(score.slot.start)} – {fmtTime(score.slot.end)}</h3><div className="response-faces">{event.people.map(p => { const s = event.responses[p.id]?.[score.slot.id]; return <span key={p.id} className={s || 'waiting'} title={`${p.name}: ${s || 'waiting'}`}>{s === 'available' ? <Check /> : s === 'unavailable' ? <X /> : s === 'tentative' ? '?' : p.name[0]}</span> })}</div><p>{score.available} available · {score.blocked} can't make it</p></div><button className="book" onClick={() => { const u = { ...event, bookedSlotId: score.slot.id }; saveEvent(u); setEvent(u) }}>{event.bookedSlotId === score.slot.id ? <><Check /> Booked</> : 'Book this time'}</button></article>)}</div>
+      <div className="legend"><span><i className="dot yes" /> Available</span><span><i className="dot maybe" /> If needed</span><span><i className="dot no" /> Can't make it</span><span><i className="dot wait" /> Waiting</span></div>
+    </section>}
+  </main>
+}
+
+export default function App() {
+  const [current, setCurrent] = useState<Route>(route())
+  useEffect(() => { const onHash = () => setCurrent(route()); addEventListener('hashchange', onHash); return () => removeEventListener('hashchange', onHash) }, [])
+  let page
+  if (current.page === 'home') page = <Home />
+  else if (current.page === 'create') page = <Create />
+  else page = <EventPage id={current.id} />
+  return <>{current.page !== 'event' && <Header />}{page}<footer>Gather <span>·</span> Plans are better together.</footer></>
+}
