@@ -201,6 +201,11 @@
   box-shadow: 0 0 0 2px #dbe7df;
 }
 
+.attendee-picker .avatar {
+  border: 1px solid;
+  box-shadow: 0 2px 7px rgba(29, 41, 37, .12);
+}
+
 .attendee-picker > button > span:nth-child(2) {
   min-width: 0;
   flex: 1;
@@ -457,6 +462,15 @@
   background: #e8e8e3;
   color: #727b76;
   font-size: 9px;
+}
+
+.person-colour-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border: 2px solid rgba(255, 255, 255, .65);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(29, 41, 37, .18);
 }
 
 .response-choices > span.available {
