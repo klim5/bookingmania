@@ -21,11 +21,12 @@ const tagOptions: { name: EventTag; icon: typeof Sunrise }[] = [
   { name: 'Dinner', icon: Utensils },
   { name: 'Late Hangs', icon: Moon },
 ]
+const tagClass = (tag: EventTag) => `tag-${tag.toLowerCase().replace(' ', '-')}`
 function TagPicker({ selected, onChange }: { selected: EventTag[]; onChange: (tags: EventTag[]) => void }) {
-  return <div className="tag-picker">{tagOptions.map(({ name, icon: Icon }) => <button key={name} className={selected.includes(name) ? 'active' : ''} onClick={() => onChange(selected.includes(name) ? selected.filter(tag => tag !== name) : [...selected, name])}><Icon /> {name}</button>)}</div>
+  return <div className="tag-picker">{tagOptions.map(({ name, icon: Icon }) => <button key={name} className={`${tagClass(name)} ${selected.includes(name) ? 'active' : ''}`} onClick={() => onChange(selected.includes(name) ? selected.filter(tag => tag !== name) : [...selected, name])}><Icon /> {name}</button>)}</div>
 }
 function TimeTags({ tags = [] }: { tags?: EventTag[] }) {
-  return tags.length ? <div className="time-tags">{tags.map(tag => { const option = tagOptions.find(item => item.name === tag); if (!option) return null; const Icon = option.icon; return <span key={tag}><Icon /> {tag}</span> })}</div> : null
+  return tags.length ? <div className="time-tags">{tags.map(tag => { const option = tagOptions.find(item => item.name === tag); if (!option) return null; const Icon = option.icon; return <span className={tagClass(tag)} key={tag}><Icon /> {tag}</span> })}</div> : null
 }
 const fmtRelativeDate = (date: string) => {
   const target = new Date(`${date}T12:00:00`)
@@ -211,6 +212,12 @@ function EventPage({ id }: { id: string }) {
       setEvent(updated); setSaved(true); setTimeout(() => setSaved(false), 1800)
     } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not save your response') }
   }
+  const toggleAvailability = (slotId: string, status: Status) => {
+    const next = { ...draft }
+    if (next[slotId] === status) delete next[slotId]
+    else next[slotId] = status
+    setDraft(next)
+  }
   const invitees = event.people.slice(1)
   const responded = invitees.filter(p => event.responses[p.id]).length
   const bestId = [...scores].sort((a, b) => a.blocked - b.blocked || b.available - a.available)[0]?.slot.id
@@ -227,7 +234,7 @@ function EventPage({ id }: { id: string }) {
       <div className="response-head"><div><span className="step">YOUR AVAILABILITY</span><h2>What's your name?</h2></div><span className="progress-count">{responded} of {invitees.length} replied</span></div>
       <div className="attendee-picker">{invitees.map(person => <button key={person.id} className={selectedPerson === person.id ? 'selected' : ''} onClick={() => setSelectedPerson(person.id)}><span className="avatar">{person.name[0].toUpperCase()}</span><span>{person.name}<small>{person.excluded ? 'Not attending' : person.optional ? 'Optional' : event.responses[person.id] ? 'Responded' : 'Waiting'}</small></span>{selectedPerson === person.id && <Check />}</button>)}</div>
       {!selectedPerson && <div className="guest-name-row"><span>Not on the list?</span><div><input value={newGuestName} onChange={e => setNewGuestName(e.target.value)} onKeyDown={e => e.key === 'Enter' && joinGuestList()} placeholder="Add your name" /><button className="secondary" disabled={addingGuest || !newGuestName.trim()} onClick={joinGuestList}><Plus size={16} /> {addingGuest ? 'Adding…' : 'Add me'}</button></div></div>}
-      {selectedPerson && <div className="availability">{excluded ? <div className="excluded-rsvp"><p>You're currently marked as not attending.</p><button className="secondary" onClick={() => setExcluded(false)}>Change my response</button></div> : <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label><p>Choose your availability for at least one option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><small className="rsvp-date-preview">{fmtRelativeDate(slot.date)}</small><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span><TimeTags tags={slot.tags} /></div><div className="statuses">{(['available', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<div className="rsvp-actions"><button className="decline-rsvp" onClick={() => submit(true)}>I can't attend</button><button className="primary" disabled={Object.keys(draft).length === 0} onClick={() => submit()}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div></>}</div>}
+      {selectedPerson && <div className="availability">{excluded ? <div className="excluded-rsvp"><p>You're currently marked as not attending.</p><button className="secondary" onClick={() => setExcluded(false)}>Change my response</button></div> : <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><small className="rsvp-date-preview">{fmtRelativeDate(slot.date)}</small><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span><TimeTags tags={slot.tags} /></div><div className="statuses">{(['available', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => toggleAvailability(slot.id, s)} />)}</div></div>)}<div className="rsvp-actions"><button className="decline-rsvp" onClick={() => submit(true)}>I can't attend</button><button className="primary" disabled={Object.keys(draft).length === 0} onClick={() => submit()}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div></>}</div>}
     </section>}
 
     {host && <section className="results">

@@ -66,9 +66,9 @@
 
 .tag-picker button:hover,
 .tag-picker button.active {
-  border-color: var(--green);
-  background: #eef5ed;
-  color: var(--green);
+  border-color: var(--tag-border);
+  background: var(--tag-bg);
+  color: var(--tag-color);
 }
 
 .tag-picker svg {
@@ -107,10 +107,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid #d8e3d6;
+  border: 1px solid var(--tag-border);
   border-radius: 999px;
-  background: #eef5ed;
-  color: var(--green);
+  background: var(--tag-bg);
+  color: var(--tag-color);
   padding: 4px 7px;
   font-size: 9px;
   font-weight: 700;
@@ -119,6 +119,36 @@
 .time-tags svg {
   width: 11px;
   height: 11px;
+}
+
+.tag-sunrise {
+  --tag-color: #b64d18;
+  --tag-bg: #fff0d8;
+  --tag-border: #f0bd78;
+}
+
+.tag-morning {
+  --tag-color: #94620a;
+  --tag-bg: #fff7c9;
+  --tag-border: #e6cd63;
+}
+
+.tag-lunch {
+  --tag-color: #347044;
+  --tag-bg: #e3f2dd;
+  --tag-border: #9ac48e;
+}
+
+.tag-dinner {
+  --tag-color: #a44435;
+  --tag-bg: #ffe5df;
+  --tag-border: #e8a092;
+}
+
+.tag-late-hangs {
+  --tag-color: #5e4b9c;
+  --tag-bg: #eee8ff;
+  --tag-border: #b8a8e4;
 }
 
 .guest-name-row {
