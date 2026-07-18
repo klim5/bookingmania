@@ -5,11 +5,12 @@ import { addPerson, addTimeOption, bookEvent, createEvent, eventUrl, getEvent, i
 
 type Route = { page: 'home' } | { page: 'create' } | { page: 'event'; id: string }
 const route = (): Route => {
-  const parts = location.hash.slice(1).split('/').filter(Boolean)
+  const parts = location.hash.slice(1).split('?')[0].split('/').filter(Boolean)
   if (parts[0] === 'event' && parts[1]) return { page: 'event', id: parts[1] }
   if (parts[0] === 'create') return { page: 'create' }
   return { page: 'home' }
 }
+const testThemeEnabled = () => new URLSearchParams(location.search).has('test') || new URLSearchParams(location.hash.split('?')[1] || '').has('test')
 
 const fmtLong = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${date}T12:00:00`))
 const fmtTime = (time: string) => new Date(`2020-01-01T${time}`).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
@@ -302,6 +303,7 @@ function EventPage({ id }: { id: string }) {
 export default function App() {
   const [current, setCurrent] = useState<Route>(route())
   useEffect(() => { const onHash = () => setCurrent(route()); addEventListener('hashchange', onHash); return () => removeEventListener('hashchange', onHash) }, [])
+  useEffect(() => { document.body.classList.toggle('sexy-theme', testThemeEnabled()); return () => document.body.classList.remove('sexy-theme') }, [current])
   let page
   if (current.page === 'home') page = <Home />
   else if (current.page === 'create') page = <Create />
