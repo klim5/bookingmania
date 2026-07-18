@@ -313,7 +313,7 @@
 
 .availability-option-main {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 18px;
 }
@@ -651,6 +651,7 @@
   .statuses {
     grid-template-columns: repeat(4, 1fr);
     gap: 4px;
+    margin-top: 0;
   }
 
   .status {
@@ -671,6 +672,8 @@
     display: flex;
     align-items: stretch;
     flex-direction: column;
+    gap: 0;
+    padding: 16px 0 18px;
   }
 
   .availability-row .slot-label {
@@ -679,6 +682,8 @@
 
   .availability-row .response-choices {
     order: 2;
+    gap: 4px;
+    margin: 9px 0 10px;
   }
 
   .availability-row .statuses,
@@ -689,8 +694,12 @@
   .availability-option-main .book {
     width: 100%;
     justify-content: center;
-    margin-top: 14px;
+    margin-top: 0;
     font-size: 12px;
+  }
+
+  .response-choices > span {
+    padding: 4px 6px;
   }
 
   .response-choices small {
