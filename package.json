@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "deploy": "npm run build && npx wrangler pages deploy",
-    "preview": "vite preview"
+    "deploy": "npm run build && wrangler deploy",
+    "preview": "npm run build && wrangler dev"
   },
   "dependencies": {
     "lucide-react": "0.468.0",
@@ -15,11 +15,12 @@
     "react-dom": "19.0.0"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.45.1",
     "@types/react": "19.0.3",
     "@types/react-dom": "19.0.2",
     "@vitejs/plugin-react": "4.3.4",
     "typescript": "5.7.3",
-    "vite": "6.0.7",
+    "vite": "^6.1.0",
     "wrangler": "^4.112.0"
   }
 }
