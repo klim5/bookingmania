@@ -698,6 +698,10 @@
     font-size: 12px;
   }
 
+  .availability-option-main .book::after {
+    content: none;
+  }
+
   .response-choices > span {
     padding: 4px 6px;
   }
