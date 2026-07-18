@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Copy, Crown, Link2, MapPin, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
-import type { EventPlan, Person, Slot, Status } from './types'
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Coffee, Copy, Crown, Link2, MapPin, Moon, Plus, Sandwich, Sparkles, Sunrise, Trash2, Utensils, Users, X } from 'lucide-react'
+import type { EventPlan, EventTag, Person, Slot, Status } from './types'
 import { addPerson, addTimeOption, bookEvent, createEvent, eventUrl, getEvent, isHost, makeId, saveResponse } from './store'
 
 type Route = { page: 'home' } | { page: 'create' } | { page: 'event'; id: string }
@@ -14,6 +14,13 @@ const route = (): Route => {
 const fmtDate = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
 const fmtLong = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${date}T12:00:00`))
 const fmtTime = (time: string) => new Date(`2020-01-01T${time}`).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
+const tagOptions: { name: EventTag; icon: typeof Sunrise }[] = [
+  { name: 'Sunrise', icon: Sunrise },
+  { name: 'Coffee', icon: Coffee },
+  { name: 'Lunch', icon: Sandwich },
+  { name: 'Dinner', icon: Utensils },
+  { name: 'Late Hangs', icon: Moon },
+]
 const fmtRelativeDate = (date: string) => {
   const target = new Date(`${date}T12:00:00`)
   const today = new Date()
@@ -24,7 +31,7 @@ const fmtRelativeDate = (date: string) => {
 
   if (days === 0) return 'Today'
   if (days === 1) return 'Tomorrow, 1 day from now'
-  if (days > 1 && days < 7) return `This ${weekday}, ${days} days from now`
+  if (days > 1 && days < 7) return `Coming ${weekday}, ${days} days from now`
   if (days >= 7 && days < 14) return `Next ${weekday}, ${days} days from now`
   if (days === -1) return 'Yesterday, 1 day ago'
   if (days < 0) return `${Math.abs(days)} days ago`
@@ -62,6 +69,7 @@ function Create() {
   const [creator, setCreator] = useState('')
   const [locationName, setLocationName] = useState('')
   const [note, setNote] = useState('')
+  const [tags, setTags] = useState<EventTag[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [personName, setPersonName] = useState('')
   const [slots, setSlots] = useState<Slot[]>([{ id: makeId(), date: tomorrow, start: '18:00', end: '19:30' }])
@@ -80,7 +88,7 @@ function Create() {
     const id = makeId()
     const host: Person = { id: makeId(), name: creator.trim(), optional: false, excluded: false }
     const hostAvailability = Object.fromEntries(slots.map(slot => [slot.id, 'available' as Status]))
-    const plan: EventPlan = { id, title: title.trim(), creator: creator.trim(), location: locationName.trim(), note: note.trim(), people: [host, ...people], slots, responses: { [host.id]: hostAvailability }, createdAt: new Date().toISOString() }
+    const plan: EventPlan = { id, title: title.trim(), creator: creator.trim(), location: locationName.trim(), note: note.trim(), tags, people: [host, ...people], slots, responses: { [host.id]: hostAvailability }, createdAt: new Date().toISOString() }
     try {
       setCreating(true); setError('')
       await createEvent(plan)
@@ -100,6 +108,7 @@ function Create() {
         <label>Your name <b>*</b><input value={creator} onChange={e => setCreator(e.target.value)} placeholder="How guests will see you" /></label>
         <label>Location <span>OPTIONAL</span><div className="input-icon"><MapPin /><input value={locationName} onChange={e => setLocationName(e.target.value)} placeholder="Add a place or video link" /></div></label>
         <label>Note <span>OPTIONAL</span><textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Anything your guests should know?" /></label>
+        <label>Vibe tags <span>OPTIONAL</span><div className="tag-picker">{tagOptions.map(({ name, icon: Icon }) => <button key={name} className={tags.includes(name) ? 'active' : ''} onClick={() => setTags(tags.includes(name) ? tags.filter(tag => tag !== name) : [...tags, name])}><Icon /> {name}</button>)}</div></label>
       </section>
       <section className="card form-card">
         <h2><span className="icon-box blue"><Users /></span> Who's invited?</h2>
@@ -205,7 +214,7 @@ function EventPage({ id }: { id: string }) {
   return <main className="event-shell">
     <div className="event-top"><Brand /><button className="share" onClick={copy}>{copied ? <Check /> : <Copy />} {copied ? 'Copied!' : 'Copy invite link'}</button></div>
     <section className="event-hero">
-      <div><div className="eyebrow"><CalendarDays size={14} /> YOU'RE INVITED</div><h1>{event.title}</h1><p className="hosted">Hosted by {event.creator}</p></div>
+      <div><div className="eyebrow"><CalendarDays size={14} /> YOU'RE INVITED</div><h1>{event.title}</h1><p className="hosted">Hosted by {event.creator}</p>{event.tags?.length ? <div className="event-tags">{event.tags.map(tag => { const option = tagOptions.find(item => item.name === tag); if (!option) return null; const Icon = option.icon; return <span key={tag}><Icon /> {tag}</span> })}</div> : null}</div>
       <div className="event-meta">{event.location && <span><MapPin /> {event.location}</span>}<span><Users /> {event.people.length} people invited</span></div>
       {event.note && <div className="note">“{event.note}”</div>}
     </section>
@@ -214,7 +223,7 @@ function EventPage({ id }: { id: string }) {
       <div className="response-head"><div><span className="step">YOUR AVAILABILITY</span><h2>What's your name?</h2></div><span className="progress-count">{responded} of {invitees.length} replied</span></div>
       <div className="attendee-picker">{invitees.map(person => <button key={person.id} className={selectedPerson === person.id ? 'selected' : ''} onClick={() => setSelectedPerson(person.id)}><span className="avatar">{person.name[0].toUpperCase()}</span><span>{person.name}<small>{person.excluded ? 'Not attending' : person.optional ? 'Optional' : event.responses[person.id] ? 'Responded' : 'Waiting'}</small></span>{selectedPerson === person.id && <Check />}</button>)}</div>
       {!selectedPerson && <div className="guest-name-row"><span>Not on the list?</span><div><input value={newGuestName} onChange={e => setNewGuestName(e.target.value)} onKeyDown={e => e.key === 'Enter' && joinGuestList()} placeholder="Add your name" /><button className="secondary" disabled={addingGuest || !newGuestName.trim()} onClick={joinGuestList}><Plus size={16} /> {addingGuest ? 'Adding…' : 'Add me'}</button></div></div>}
-      {selectedPerson && <div className="availability">{excluded ? <div className="excluded-rsvp"><p>You're currently marked as not attending.</p><button className="secondary" onClick={() => setExcluded(false)}>Change my response</button></div> : <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label><p>Choose your availability for at least one option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<div className="rsvp-actions"><button className="decline-rsvp" onClick={() => submit(true)}>I can't attend</button><button className="primary" disabled={Object.keys(draft).length === 0} onClick={() => submit()}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div></>}</div>}
+      {selectedPerson && <div className="availability">{excluded ? <div className="excluded-rsvp"><p>You're currently marked as not attending.</p><button className="secondary" onClick={() => setExcluded(false)}>Change my response</button></div> : <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label><p>Choose your availability for at least one option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><small className="rsvp-date-preview">{fmtRelativeDate(slot.date)}</small><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<div className="rsvp-actions"><button className="decline-rsvp" onClick={() => submit(true)}>I can't attend</button><button className="primary" disabled={Object.keys(draft).length === 0} onClick={() => submit()}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div></>}</div>}
     </section>}
 
     {host && <section className="results">

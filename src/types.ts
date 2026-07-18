@@ -1,4 +1,5 @@
 export type Status = 'available' | 'tentative' | 'unavailable'
+export type EventTag = 'Sunrise' | 'Coffee' | 'Lunch' | 'Dinner' | 'Late Hangs'
 
 export interface Person {
   id: string
@@ -20,6 +21,7 @@ export interface EventPlan {
   note: string
   location: string
   creator: string
+  tags: EventTag[]
   people: Person[]
   slots: Slot[]
   responses: Record<string, Record<string, Status>>

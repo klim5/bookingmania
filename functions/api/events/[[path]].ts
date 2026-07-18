@@ -10,6 +10,7 @@ interface Person { id: string; name: string; optional: boolean; excluded?: boole
 interface Slot { id: string; date: string; start: string; end: string }
 interface EventPlan {
   id: string; title: string; note: string; location: string; creator: string
+  tags?: string[]
   people: Person[]; slots: Slot[]
   responses: Record<string, Record<string, 'available' | 'tentative' | 'unavailable'>>
   createdAt: string; bookedSlotId?: string
