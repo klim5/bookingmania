@@ -7,8 +7,19 @@ async function api<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
-  const body = await response.json() as T & { error?: string }
-  if (!response.ok) throw new Error(body.error || 'Request failed')
+  const text = await response.text()
+  let body: (T & { error?: string }) | undefined
+
+  if (text) {
+    try {
+      body = JSON.parse(text) as T & { error?: string }
+    } catch {
+      throw new Error(`API returned ${response.status} ${response.statusText} instead of JSON`)
+    }
+  }
+
+  if (!response.ok) throw new Error(body?.error || `API request failed (${response.status} ${response.statusText})`)
+  if (!body) throw new Error(`API returned an empty response (${response.status} ${response.statusText})`)
   return body
 }
 
