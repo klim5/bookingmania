@@ -326,7 +326,9 @@
 }
 
 .slot-date-line {
-  gap: 6px 10px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .slot-date-line strong {
@@ -335,12 +337,14 @@
 }
 
 .slot-label .slot-date-line .rsvp-date-preview {
-  width: auto;
-  padding: 0;
-  background: transparent;
-  color: #78817c;
-  font-size: 9px;
-  font-weight: 600;
+  width: max-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: #eef3e8;
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .slot-time-line {
@@ -660,7 +664,26 @@
   }
 
   .availability-option-main {
-    display: block;
+    display: contents;
+  }
+
+  .availability-row {
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .availability-row .slot-label {
+    order: 1;
+  }
+
+  .availability-row .response-choices {
+    order: 2;
+  }
+
+  .availability-row .statuses,
+  .availability-row .book {
+    order: 3;
   }
 
   .availability-option-main .book {
