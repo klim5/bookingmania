@@ -2,6 +2,18 @@
   align-items: start;
 }
 
+.slot-edit label {
+  min-width: 0;
+}
+
+.slot-edit input[type='date'],
+.slot-edit input[type='time'] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .slot-edit .slot-num,
 .slot-edit .trash {
   margin-top: 27px;
@@ -496,6 +508,11 @@
 }
 
 @media (max-width: 720px) {
+  .slot-edit input[type='date'],
+  .slot-edit input[type='time'] {
+    font-size: 16px;
+  }
+
   .attendee-picker {
     grid-template-columns: 1fr;
   }
