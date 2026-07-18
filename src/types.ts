@@ -1,4 +1,4 @@
-export type Status = 'available' | 'tentative' | 'unavailable'
+export type Status = 'unavailable' | 'tentative' | 'available' | 'preferred'
 export type EventTag = 'Sunrise' | 'Morning' | 'Lunch' | 'Dinner' | 'Late Hangs'
 
 export interface Person {

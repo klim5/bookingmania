@@ -318,6 +318,61 @@
   gap: 18px;
 }
 
+.statuses {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+  width: min(100%, 390px);
+}
+
+.status {
+  min-width: 0;
+  padding: 9px 7px;
+}
+
+.status.unavailable {
+  background: #fff8f6;
+  color: #8d584d;
+}
+
+.status.tentative {
+  background: #fffaf7;
+  color: #8b6c62;
+}
+
+.status.available {
+  background: #f8fbf6;
+  color: #587661;
+}
+
+.status.preferred {
+  background: #f4faf1;
+  color: #3e7049;
+}
+
+.status.active.unavailable {
+  border-color: #c76f5c;
+  background: #efc8be;
+  color: #7f3021;
+}
+
+.status.active.tentative {
+  border-color: #d8a491;
+  background: #f7e5de;
+  color: #7e5143;
+}
+
+.status.active.available {
+  border-color: #91b58c;
+  background: #e3f0df;
+  color: #346b3d;
+}
+
+.status.active.preferred {
+  border-color: #52865d;
+  background: #bcd9b5;
+  color: #225f30;
+}
+
 .response-choices {
   display: flex;
   flex-wrap: wrap;
@@ -342,10 +397,20 @@
   color: #34713d;
 }
 
+.response-choices > span.preferred {
+  background: #bcd9b5;
+  color: #225f30;
+}
+
+.response-choices > span.tentative {
+  background: #f7e5de;
+  color: #7e5143;
+}
+
 .response-choices > span.unavailable,
 .response-choices > span.excluded {
-  background: #f6dfd9;
-  color: #983c2a;
+  background: #efc8be;
+  color: #7f3021;
 }
 
 .response-choices b {
@@ -521,7 +586,12 @@
   }
 
   .statuses {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  .status {
+    padding: 9px 3px;
   }
 
   .availability > .optional {

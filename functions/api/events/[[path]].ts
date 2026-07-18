@@ -11,12 +11,12 @@ interface Slot { id: string; date: string; start: string; end: string; tags?: st
 interface EventPlan {
   id: string; title: string; note: string; location: string; creator: string
   people: Person[]; slots: Slot[]
-  responses: Record<string, Record<string, 'available' | 'tentative' | 'unavailable'>>
+  responses: Record<string, Record<string, 'unavailable' | 'tentative' | 'available' | 'preferred'>>
   createdAt: string; bookedSlotId?: string
 }
 
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
-const validStatus = (value: unknown) => ['available', 'tentative', 'unavailable'].includes(String(value))
+const validStatus = (value: unknown) => ['unavailable', 'tentative', 'available', 'preferred'].includes(String(value))
 
 async function readEvent(db: D1Database, id: string) {
   const row = await db.prepare('SELECT data FROM events WHERE id = ?').bind(id).first<{ data: string }>()
@@ -27,7 +27,7 @@ async function readEvent(db: D1Database, id: string) {
   if (host) {
     host.optional = false
     host.excluded = false
-    event.responses[host.id] = Object.fromEntries(event.slots.map(slot => [slot.id, 'available']))
+    event.responses[host.id] = Object.fromEntries(event.slots.map(slot => [slot.id, 'preferred']))
   }
   return event
 }
@@ -44,7 +44,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       const host = event.people[0]
       host.optional = false
       host.excluded = false
-      event.responses[host.id] = Object.fromEntries(event.slots.map(slot => [slot.id, 'available']))
+      event.responses[host.id] = Object.fromEntries(event.slots.map(slot => [slot.id, 'preferred']))
       await env.abcd.prepare('INSERT INTO events (id, data, host_token) VALUES (?, ?, ?)')
         .bind(event.id, JSON.stringify(event), body.hostToken).run()
       return json({ event }, 201)
@@ -85,7 +85,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       if (event.slots.some(existing => existing.id === slot.id)) return json({ error: 'Time option already exists' }, 409)
       event.slots.push(slot)
       const host = event.people[0]
-      if (host) event.responses[host.id] = { ...(event.responses[host.id] || {}), [slot.id]: 'available' }
+      if (host) event.responses[host.id] = { ...(event.responses[host.id] || {}), [slot.id]: 'preferred' }
       await env.abcd.prepare('UPDATE events SET data = ? WHERE id = ?').bind(JSON.stringify(event), id).run()
       return json({ event }, 201)
     }
