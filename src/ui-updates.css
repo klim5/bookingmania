@@ -394,6 +394,19 @@
   color: white;
 }
 
+.book.recommended-book {
+  border-color: #78a45f;
+  background: #eaf4bf;
+  color: #315f34;
+  box-shadow: 0 3px 10px rgba(49, 95, 52, .14);
+}
+
+.book.recommended-book:hover {
+  border-color: var(--green);
+  background: var(--green);
+  color: white;
+}
+
 .response-choices {
   display: flex;
   flex-wrap: wrap;
