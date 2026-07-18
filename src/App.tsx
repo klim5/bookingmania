@@ -38,15 +38,13 @@ const fmtRelativeDate = (date: string) => {
   const targetDay = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate())
   const currentDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
   const days = Math.round((targetDay - currentDay) / 86400000)
-  const weekday = new Intl.DateTimeFormat('en-AU', { weekday: 'long' }).format(target)
 
   if (days === 0) return 'Today'
-  if (days === 1) return 'Tomorrow, 1 day from now'
-  if (days > 1 && days < 7) return `Coming ${weekday}, ${days} days from now`
-  if (days >= 7 && days < 14) return `Next ${weekday}, ${days} days from now`
+  if (days === 1) return 'Tomorrow'
+  if (days > 1) return `In ${days} days`
   if (days === -1) return 'Yesterday, 1 day ago'
   if (days < 0) return `${Math.abs(days)} days ago`
-  return `${days} days from now`
+  return 'Today'
 }
 
 function Brand() {

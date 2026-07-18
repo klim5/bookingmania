@@ -393,47 +393,51 @@
 }
 
 .status.unavailable {
-  background: #fff8f6;
-  color: #8d584d;
+  border-color: #e8c2b9;
+  background: #fff3f0;
+  color: #934739;
 }
 
 .status.tentative {
-  background: #fffaf7;
-  color: #8b6c62;
+  border-color: #ead8aa;
+  background: #fff8e8;
+  color: #806221;
 }
 
 .status.available {
-  background: #f8fbf6;
-  color: #587661;
+  border-color: #c5ddc3;
+  background: #f0f8ef;
+  color: #497053;
 }
 
 .status.preferred {
-  background: #f4faf1;
-  color: #3e7049;
+  border-color: #9fc4a5;
+  background: #e5f2e4;
+  color: #2e673b;
 }
 
 .status.active.unavailable {
-  border-color: #c76f5c;
-  background: #efc8be;
-  color: #7f3021;
+  border-color: #bd4d39;
+  background: #d96c58;
+  color: white;
 }
 
 .status.active.tentative {
-  border-color: #d8a491;
-  background: #f7e5de;
-  color: #7e5143;
+  border-color: #cf9d36;
+  background: #f2c66d;
+  color: #66480c;
 }
 
 .status.active.available {
-  border-color: #91b58c;
-  background: #e3f0df;
-  color: #346b3d;
+  border-color: #79a979;
+  background: #b9ddb8;
+  color: #245d30;
 }
 
 .status.active.preferred {
-  border-color: #52865d;
-  background: #bcd9b5;
-  color: #225f30;
+  border-color: #2e6740;
+  background: #3f7d50;
+  color: white;
 }
 
 .response-choices {
@@ -456,23 +460,27 @@
 }
 
 .response-choices > span.available {
-  background: #e3f0df;
-  color: #34713d;
+  background: #d8ecd6;
+  color: #285f35;
 }
 
 .response-choices > span.preferred {
-  background: #bcd9b5;
-  color: #225f30;
+  background: #3f7d50;
+  color: white;
 }
 
 .response-choices > span.tentative {
-  background: #f7e5de;
-  color: #7e5143;
+  background: #f6dfa5;
+  color: #725312;
 }
 
-.response-choices > span.unavailable,
+.response-choices > span.unavailable {
+  background: #d97965;
+  color: white;
+}
+
 .response-choices > span.excluded {
-  background: #efc8be;
+  background: #f0c6bd;
   color: #7f3021;
 }
 
