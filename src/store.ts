@@ -35,6 +35,11 @@ export async function createEvent(event: EventPlan) {
   return result.event
 }
 
+export async function addPerson(eventId: string, name: string) {
+  const result = await api<{ event: EventPlan; personId: string }>(`/${eventId}/people`, { method: 'POST', body: JSON.stringify({ name }) })
+  return result
+}
+
 export async function saveResponse(eventId: string, personId: string, availability: EventPlan['responses'][string], optional: boolean, excluded: boolean) {
   const result = await api<{ event: EventPlan }>(`/${eventId}/responses/${personId}`, { method: 'PUT', body: JSON.stringify({ availability, optional, excluded }) })
   return result.event

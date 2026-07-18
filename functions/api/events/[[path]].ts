@@ -45,6 +45,19 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       return event ? json({ event }) : json({ error: 'Event not found' }, 404)
     }
 
+    if (method === 'POST' && action === 'people') {
+      const event = await readEvent(env.abcd, id)
+      if (!event) return json({ error: 'Event not found' }, 404)
+      const body = await request.json() as { name?: string }
+      const name = body.name?.trim()
+      if (!name) return json({ error: 'Enter your name' }, 400)
+      if (event.people.some(person => person.name.toLowerCase() === name.toLowerCase())) return json({ error: 'That name is already on the guest list' }, 409)
+      const person: Person = { id: crypto.randomUUID().split('-')[0], name, optional: false, excluded: false }
+      event.people.push(person)
+      await env.abcd.prepare('UPDATE events SET data = ? WHERE id = ?').bind(JSON.stringify(event), id).run()
+      return json({ event, personId: person.id }, 201)
+    }
+
     if (method === 'PUT' && action === 'responses' && personId) {
       const event = await readEvent(env.abcd, id)
       if (!event) return json({ error: 'Event not found' }, 404)
