@@ -347,50 +347,50 @@
 }
 
 .status.unavailable {
-  border-color: #e8c2b9;
-  background: #fff3f0;
-  color: #934739;
+  border-color: #dfc0b9;
+  background: #fbf3f1;
+  color: #805048;
 }
 
 .status.tentative {
-  border-color: #ead8aa;
-  background: #fff8e8;
-  color: #806221;
+  border-color: #e2d4ad;
+  background: #fbf7ed;
+  color: #75612f;
 }
 
 .status.available {
-  border-color: #c5ddc3;
-  background: #f0f8ef;
-  color: #497053;
+  border-color: #bed5df;
+  background: #eff7fa;
+  color: #456b7c;
 }
 
 .status.preferred {
-  border-color: #9fd4b1;
-  background: #e7f6ec;
-  color: #236b42;
+  border-color: #b7cdbd;
+  background: #eef5f0;
+  color: #496a52;
 }
 
 .status.active.unavailable {
-  border-color: #bd4d39;
-  background: #d96c58;
-  color: white;
+  border-color: #c9897c;
+  background: #e5b4aa;
+  color: #6f3a31;
 }
 
 .status.active.tentative {
-  border-color: #cf9d36;
-  background: #f2c66d;
-  color: #66480c;
+  border-color: #c9ae6f;
+  background: #ead39c;
+  color: #654f1f;
 }
 
 .status.active.available {
-  border-color: #79a979;
-  background: #b9ddb8;
-  color: #245d30;
+  border-color: #79a9bd;
+  background: #b9d8e8;
+  color: #295b71;
 }
 
 .status.active.preferred {
-  border-color: #237348;
-  background: #2f8f5b;
+  border-color: #668e72;
+  background: #7fa789;
   color: white;
 }
 
@@ -436,28 +436,28 @@
 }
 
 .response-choices > span.available {
-  background: #d8ecd6;
-  color: #285f35;
+  background: #cbe4ef;
+  color: #295b71;
 }
 
 .response-choices > span.preferred {
-  background: #2f8f5b;
+  background: #7fa789;
   color: white;
 }
 
 .response-choices > span.tentative {
-  background: #f6dfa5;
-  color: #725312;
+  background: #efdcad;
+  color: #654f1f;
 }
 
 .response-choices > span.unavailable {
-  background: #d97965;
-  color: white;
+  background: #e5b4aa;
+  color: #6f3a31;
 }
 
 .response-choices > span.excluded {
-  background: #f0c6bd;
-  color: #7f3021;
+  background: #eed1ca;
+  color: #74453c;
 }
 
 .response-choices b {
