@@ -227,7 +227,7 @@ function EventPage({ id }: { id: string }) {
   }
   const responded = event.people.filter(person => event.responses[person.id]).length
   const bookedSlot = event.slots.find(slot => slot.id === event.bookedSlotId)
-  const selectedPersonIsHost = host && selectedPerson === event.people[0]?.id
+  const selectedPersonIsHost = selectedPerson === event.people[0]?.id
   const toggleBooking = async (slotId: string) => {
     try { setEvent(await bookEvent(id, slotId)); setLoadError('') }
     catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not update the booking') }
