@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Coffee, Copy, Link2, MapPin, Moon, Plus, Sandwich, Sparkles, Sunrise, Trash2, Utensils, Users, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CalendarDays, CalendarPlus, Check, ChevronRight, Clock3, Coffee, Copy, Link2, MapPin, Moon, Plus, Sandwich, Sparkles, Sunrise, Trash2, Utensils, Users, X } from 'lucide-react'
 import type { EventPlan, EventTag, Person, Slot, Status } from './types'
 import { addPerson, addTimeOption, bookEvent, createEvent, eventUrl, getEvent, isHost, makeId, saveResponse } from './store'
 
@@ -13,6 +13,8 @@ const route = (): Route => {
 
 const fmtLong = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${date}T12:00:00`))
 const fmtTime = (time: string) => new Date(`2020-01-01T${time}`).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
+const escapeCalendarText = (value: string) => value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([;,])/g, '\\$1')
+const calendarDateTime = (date: string, time: string) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`
 const tagOptions: { name: EventTag; icon: typeof Sunrise }[] = [
   { name: 'Sunrise', icon: Sunrise },
   { name: 'Morning', icon: Coffee },
@@ -221,6 +223,34 @@ function EventPage({ id }: { id: string }) {
     try { setEvent(await bookEvent(id, slotId)); setLoadError('') }
     catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not update the booking') }
   }
+  const downloadCalendarFile = (slot: Slot) => {
+    const inviteUrl = eventUrl(id)
+    const description = [event.note, `Hosted by ${event.creator}`, inviteUrl].filter(Boolean).join('\n\n')
+    const calendar = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Gather//BookingMania//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      'BEGIN:VEVENT',
+      `UID:${escapeCalendarText(`${event.id}-${slot.id}@bookingmania.pages.dev`)}`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`,
+      `DTSTART:${calendarDateTime(slot.date, slot.start)}`,
+      `DTEND:${calendarDateTime(slot.date, slot.end)}`,
+      `SUMMARY:${escapeCalendarText(event.title)}`,
+      `DESCRIPTION:${escapeCalendarText(description)}`,
+      event.location ? `LOCATION:${escapeCalendarText(event.location)}` : '',
+      `URL:${escapeCalendarText(inviteUrl)}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n') + '\r\n'
+    const fileUrl = URL.createObjectURL(new Blob([calendar], { type: 'text/calendar;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = fileUrl
+    link.download = `${event.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'gather-event'}.ics`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(fileUrl), 0)
+  }
 
   return <main className="event-shell">
     <div className="event-top"><Brand /><button className="share" onClick={copy}>{copied ? <Check /> : <Copy />} {copied ? 'Copied!' : 'Copy invite link'}</button></div>
@@ -230,7 +260,7 @@ function EventPage({ id }: { id: string }) {
       {event.note && <div className="note">“{event.note}”</div>}
     </section>
 
-    {bookedSlot ? <section className="booked-summary card"><span className="step">IT'S BOOKED</span><div className="booked-icon"><Check /></div><h2>{fmtLong(bookedSlot.date)}</h2><p className="booked-relative">{fmtRelativeDate(bookedSlot.date)}</p><strong>{fmtTime(bookedSlot.start)} – {fmtTime(bookedSlot.end)}</strong>{event.location && <div className="booked-place"><MapPin /> {event.location}</div>}<TimeTags tags={bookedSlot.tags} />{event.note && <p className="booked-note">“{event.note}”</p>}{host && <button className="book unbook" onClick={() => toggleBooking(bookedSlot.id)}>Unbook this time</button>}</section> : <section className="response card">
+    {bookedSlot ? <section className="booked-summary card"><span className="step">IT'S BOOKED</span><div className="booked-icon"><Check /></div><h2>{fmtLong(bookedSlot.date)}</h2><p className="booked-relative">{fmtRelativeDate(bookedSlot.date)}</p><strong>{fmtTime(bookedSlot.start)} – {fmtTime(bookedSlot.end)}</strong>{event.location && <div className="booked-place"><MapPin /> {event.location}</div>}<TimeTags tags={bookedSlot.tags} />{event.note && <p className="booked-note">“{event.note}”</p>}<button className="primary calendar-download" onClick={() => downloadCalendarFile(bookedSlot)}><CalendarPlus size={17} /> Add to calendar</button>{host && <button className="book unbook" onClick={() => toggleBooking(bookedSlot.id)}>Unbook this time</button>}</section> : <section className="response card">
       <div className="response-head"><div><span className="step">AVAILABILITY</span><h2>What's your name?</h2></div><span className="progress-count">{responded} of {event.people.length} replied</span></div>
       <div className="attendee-picker">{event.people.map(person => <button key={person.id} className={selectedPerson === person.id ? 'selected' : ''} onClick={() => setSelectedPerson(person.id)}><span className="avatar">{person.name[0].toUpperCase()}</span><span>{person.name}<small>{person.id === event.people[0]?.id ? 'Host' : person.excluded ? 'Not attending' : person.optional ? 'Tentative' : event.responses[person.id] ? 'Responded' : 'Waiting'}</small></span>{selectedPerson === person.id && <Check />}</button>)}</div>
       {!selectedPerson && <div className="guest-name-row"><span>Not on the list?</span><div><input value={newGuestName} onChange={e => setNewGuestName(e.target.value)} onKeyDown={e => e.key === 'Enter' && joinGuestList()} placeholder="Add your name" /><button className="secondary" disabled={addingGuest || !newGuestName.trim()} onClick={joinGuestList}><Plus size={16} /> {addingGuest ? 'Adding…' : 'Add me'}</button></div></div>}
