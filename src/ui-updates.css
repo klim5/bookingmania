@@ -649,12 +649,15 @@
   }
 
   .statuses {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 4px;
-    margin-top: 0;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    margin: 14px 0 4px;
   }
 
   .status {
+    width: 100%;
+    min-height: 54px;
     padding: 9px 3px;
   }
 
