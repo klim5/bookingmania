@@ -6,8 +6,8 @@
   min-width: 0;
 }
 
-.slot-edit input[type='date'],
-.slot-edit input[type='time'] {
+.slot-edit input[type="date"],
+.slot-edit input[type="time"] {
   display: block;
   width: 100%;
   min-width: 0;
@@ -105,7 +105,7 @@
   margin-left: 5px;
   color: #9a9f9b;
   font-size: 8px;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
 }
 
 .time-tags {
@@ -203,7 +203,7 @@
 
 .attendee-picker .avatar {
   border: 1px solid;
-  box-shadow: 0 2px 7px rgba(29, 41, 37, .12);
+  box-shadow: 0 2px 7px rgba(29, 41, 37, 0.12);
 }
 
 .attendee-picker > button > span:nth-child(2) {
@@ -259,57 +259,6 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: 26px;
-}
-
-.availability > .optional {
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid #d8e3d6;
-  border-radius: 11px;
-  background: #f5f8f2;
-  color: #4e5f56;
-  line-height: 1.45;
-  text-align: left;
-}
-
-.availability > .optional input {
-  appearance: none;
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin-top: 0;
-  border: 1.5px solid #9aaca2;
-  border-radius: 6px;
-  background: white;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 13px;
-  cursor: pointer;
-  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-}
-
-.availability > .optional input:hover {
-  border-color: var(--green);
-  transform: translateY(-1px);
-}
-
-.availability > .optional input:checked {
-  border-color: var(--green);
-  background-color: var(--green);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2.2' d='m3.5 8 3 3 6-6'/%3E%3C/svg%3E");
-}
-
-.availability > .optional input:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px #cfe0d6;
-}
-
-.availability > .optional span {
-  float: none;
-  color: inherit;
-  font-size: 12px;
-  letter-spacing: 0;
 }
 
 .availability-row {
@@ -449,7 +398,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 20px;
   padding-top: 0;
 }
 
@@ -503,7 +452,7 @@
 }
 
 .response-choices small {
-  opacity: .8;
+  opacity: 0.8;
   font-size: 9px;
 }
 
@@ -527,7 +476,7 @@
 
 .booked-summary h2 {
   margin: 8px 0 5px;
-  font-family: 'Fraunces';
+  font-family: "Fraunces";
   font-size: 32px;
 }
 
@@ -661,8 +610,8 @@
 }
 
 @media (max-width: 720px) {
-  .slot-edit input[type='date'],
-  .slot-edit input[type='time'] {
+  .slot-edit input[type="date"],
+  .slot-edit input[type="time"] {
     font-size: 16px;
   }
 
@@ -681,12 +630,6 @@
     width: 100%;
     min-height: 54px;
     padding: 9px 3px;
-  }
-
-  .availability > .optional {
-    gap: 12px;
-    padding: 14px;
-    font-size: 13px;
   }
 
   .availability-option-main {
