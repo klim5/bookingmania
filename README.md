@@ -11,6 +11,9 @@ npm run dev
 
 Cloudflare Pages can deploy the app with `npm run build` and the output directory `dist`.
 
+To deploy from the command line, use `npm run deploy`. This project uses Pages
+Functions, so use `wrangler pages deploy` rather than `wrangler deploy`.
+
 ## D1 persistence
 
 The Pages Function in `functions/api/events/[[path]].ts` expects a D1 binding named `abcd`.

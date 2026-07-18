@@ -14,6 +14,22 @@ const route = (): Route => {
 const fmtDate = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
 const fmtLong = (date: string) => new Intl.DateTimeFormat('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${date}T12:00:00`))
 const fmtTime = (time: string) => new Date(`2020-01-01T${time}`).toLocaleTimeString('en-AU', { hour: 'numeric', minute: '2-digit' })
+const fmtRelativeDate = (date: string) => {
+  const target = new Date(`${date}T12:00:00`)
+  const today = new Date()
+  const targetDay = Date.UTC(target.getFullYear(), target.getMonth(), target.getDate())
+  const currentDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  const days = Math.round((targetDay - currentDay) / 86400000)
+  const weekday = new Intl.DateTimeFormat('en-AU', { weekday: 'long' }).format(target)
+
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Tomorrow, 1 day from now'
+  if (days > 1 && days < 7) return `This ${weekday}, ${days} days from now`
+  if (days >= 7 && days < 14) return `Next ${weekday}, ${days} days from now`
+  if (days === -1) return 'Yesterday, 1 day ago'
+  if (days < 0) return `${Math.abs(days)} days ago`
+  return `${days} days from now`
+}
 
 function Brand() {
   return <button className="brand" onClick={() => location.hash = ''}><span><Sparkles size={18} /></span> Gather</button>
@@ -95,7 +111,7 @@ function Create() {
       <section className="card form-card wide">
         <h2><span className="icon-box green"><CalendarDays /></span> Time options</h2>
         <p className="section-copy">Give everyone a few good options to choose from.</p>
-        <div className="slots">{slots.map((slot, index) => <div className="slot-edit" key={slot.id}><span className="slot-num">{index + 1}</span><label>Date<input type="date" value={slot.date} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, date: e.target.value } : s))} /></label><label>Starts<input type="time" value={slot.start} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, start: e.target.value } : s))} /></label><label>Ends<input type="time" value={slot.end} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, end: e.target.value } : s))} /></label><button className="icon-button trash" disabled={slots.length === 1} onClick={() => setSlots(slots.filter(s => s.id !== slot.id))}><Trash2 size={18} /></button></div>)}</div>
+        <div className="slots">{slots.map((slot, index) => <div className="slot-edit" key={slot.id}><span className="slot-num">{index + 1}</span><label>Date<input type="date" value={slot.date} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, date: e.target.value } : s))} />{slot.date && <small style={{ display: 'block', marginTop: 6, color: 'var(--green)', fontSize: 11, fontWeight: 600 }}>{fmtRelativeDate(slot.date)}</small>}</label><label>Starts<input type="time" value={slot.start} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, start: e.target.value } : s))} /></label><label>Ends<input type="time" value={slot.end} onChange={e => setSlots(slots.map(s => s.id === slot.id ? { ...s, end: e.target.value } : s))} /></label><button className="icon-button trash" disabled={slots.length === 1} onClick={() => setSlots(slots.filter(s => s.id !== slot.id))}><Trash2 size={18} /></button></div>)}</div>
         <button className="secondary add-time" onClick={() => setSlots([...slots, { id: makeId(), date: tomorrow, start: '18:00', end: '19:30' }])}><Plus size={17} /> Add another time</button>
       </section>
     </div>
