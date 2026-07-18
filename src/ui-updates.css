@@ -280,7 +280,7 @@
 }
 
 .slot-date-line {
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
 }
 
@@ -298,7 +298,7 @@
   color: #64736c;
   font-size: 10px;
   font-weight: 700;
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .slot-time-line {
@@ -610,6 +610,14 @@
 }
 
 @media (max-width: 720px) {
+  .slot-date-line {
+    align-items: flex-end;
+  }
+
+  .slot-label .slot-date-line .rsvp-date-preview {
+    margin-left: auto;
+  }
+
   .slot-edit input[type="date"],
   .slot-edit input[type="time"] {
     font-size: 16px;
