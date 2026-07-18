@@ -51,9 +51,9 @@ export async function addTimeOption(eventId: string, slot: EventPlan['slots'][nu
   return result.event
 }
 
-export async function bookEvent(eventId: string, slotId: string) {
+export async function bookEvent(eventId: string, slotId: string, hostPersonId: string) {
   const hostToken = localStorage.getItem(hostKey(eventId)) || ''
-  const result = await api<{ event: EventPlan }>(`/${eventId}/book`, { method: 'PUT', headers: { 'X-Host-Token': hostToken }, body: JSON.stringify({ slotId }) })
+  const result = await api<{ event: EventPlan }>(`/${eventId}/book`, { method: 'PUT', headers: { 'X-Host-Token': hostToken }, body: JSON.stringify({ slotId, hostPersonId }) })
   return result.event
 }
 

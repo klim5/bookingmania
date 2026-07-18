@@ -114,9 +114,10 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       const hostToken = request.headers.get('X-Host-Token')
       const row = await env.abcd.prepare('SELECT data, host_token FROM events WHERE id = ?').bind(id).first<{ data: string; host_token: string }>()
       if (!row) return json({ error: 'Event not found' }, 404)
-      if (!hostToken || hostToken !== row.host_token) return json({ error: 'Only the host can book this event' }, 403)
-      const body = await request.json() as { slotId?: string }
+      const body = await request.json() as { slotId?: string; hostPersonId?: string }
       const event = JSON.parse(row.data) as EventPlan
+      const selectedHost = Boolean(body.hostPersonId && body.hostPersonId === event.people[0]?.id)
+      if (hostToken !== row.host_token && !selectedHost) return json({ error: 'Select the host before booking this event' }, 403)
       if (!body.slotId || !event.slots.some(slot => slot.id === body.slotId)) return json({ error: 'Unknown time option' }, 400)
       event.bookedSlotId = event.bookedSlotId === body.slotId ? undefined : body.slotId
       await env.abcd.prepare('UPDATE events SET data = ? WHERE id = ?').bind(JSON.stringify(event), id).run()
