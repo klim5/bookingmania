@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Copy, Crown, Link2, MapPin, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
 import type { EventPlan, Person, Slot, Status } from './types'
-import { eventUrl, getEvent, makeId, saveEvent } from './store'
+import { bookEvent, createEvent, eventUrl, getEvent, isHost, makeId, saveResponse } from './store'
 
 type Route = { page: 'home' } | { page: 'create' } | { page: 'event'; id: string }
 const route = (): Route => {
@@ -50,13 +50,14 @@ function Create() {
   const [personName, setPersonName] = useState('')
   const [slots, setSlots] = useState<Slot[]>([{ id: makeId(), date: tomorrow, start: '18:00', end: '19:30' }])
   const [error, setError] = useState('')
+  const [creating, setCreating] = useState(false)
 
   const addPerson = () => {
     const name = personName.trim()
     if (!name || people.some(p => p.name.toLowerCase() === name.toLowerCase())) return
     setPeople([...people, { id: makeId(), name, optional: false }]); setPersonName('')
   }
-  const create = () => {
+  const create = async () => {
     if (!title.trim() || !creator.trim() || !people.length || !slots.length || slots.some(s => !s.date || !s.start || !s.end)) {
       setError('Add an event name, your name, at least one guest and one complete time option.'); return
     }
@@ -64,7 +65,14 @@ function Create() {
     const host: Person = { id: makeId(), name: creator.trim(), optional: false }
     const hostAvailability = Object.fromEntries(slots.map(slot => [slot.id, 'available' as Status]))
     const plan: EventPlan = { id, title: title.trim(), creator: creator.trim(), location: locationName.trim(), note: note.trim(), people: [host, ...people], slots, responses: { [host.id]: hostAvailability }, createdAt: new Date().toISOString() }
-    saveEvent(plan); localStorage.setItem(`gather:host:${id}`, 'true'); location.hash = `/event/${id}`
+    try {
+      setCreating(true); setError('')
+      await createEvent(plan)
+      location.hash = `/event/${id}`
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not create the event.')
+      setCreating(false)
+    }
   }
   return <main className="create-shell">
     <button className="back" onClick={() => history.back()}><ArrowLeft size={17} /> Back</button>
@@ -92,7 +100,7 @@ function Create() {
       </section>
     </div>
     {error && <p className="error">{error}</p>}
-    <div className="create-action"><button className="primary big" onClick={create}>Create & share <ArrowRight size={19} /></button></div>
+    <div className="create-action"><button className="primary big" disabled={creating} onClick={create}>{creating ? 'Creating…' : 'Create & share'} {!creating && <ArrowRight size={19} />}</button></div>
   </main>
 }
 
@@ -103,13 +111,19 @@ function StatusButton({ status, active, onClick }: { status: Status; active: boo
 }
 
 function EventPage({ id }: { id: string }) {
-  const [event, setEvent] = useState<EventPlan | null>(() => getEvent(id))
+  const [event, setEvent] = useState<EventPlan | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [selectedPerson, setSelectedPerson] = useState('')
   const [draft, setDraft] = useState<Record<string, Status>>({})
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
-  const host = localStorage.getItem(`gather:host:${id}`) === 'true'
+  const host = isHost(id)
 
+  useEffect(() => {
+    setLoading(true)
+    getEvent(id).then(setEvent).catch(cause => setLoadError(cause instanceof Error ? cause.message : 'Event not found')).finally(() => setLoading(false))
+  }, [id])
   useEffect(() => { if (selectedPerson && event) setDraft(event.responses[selectedPerson] || {}) }, [selectedPerson, event])
   const scores = useMemo(() => event?.slots.map(slot => {
     const required = event.people.filter(p => !p.optional)
@@ -117,10 +131,16 @@ function EventPage({ id }: { id: string }) {
     const blocked = required.filter(p => event.responses[p.id]?.[slot.id] === 'unavailable').length
     return { slot, available, blocked, total: required.length }
   }) || [], [event])
-  if (!event) return <main className="not-found"><CalendarDays /><h1>We couldn't find that event</h1><p>The link may be incorrect, or this demo event was created on another device.</p><button className="primary" onClick={() => location.hash = ''}>Go home</button></main>
+  if (loading) return <main className="not-found"><CalendarDays /><h1>Loading your event…</h1></main>
+  if (!event) return <main className="not-found"><CalendarDays /><h1>We couldn't find that event</h1><p>{loadError || 'The invite link may be incorrect.'}</p><button className="primary" onClick={() => location.hash = ''}>Go home</button></main>
 
   const copy = async () => { await navigator.clipboard.writeText(eventUrl(id)); setCopied(true); setTimeout(() => setCopied(false), 1800) }
-  const submit = () => { const updated = { ...event, responses: { ...event.responses, [selectedPerson]: draft } }; saveEvent(updated); setEvent(updated); setSaved(true); setTimeout(() => setSaved(false), 1800) }
+  const submit = async () => {
+    try {
+      const updated = await saveResponse(id, selectedPerson, draft)
+      setEvent(updated); setSaved(true); setTimeout(() => setSaved(false), 1800)
+    } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not save your response') }
+  }
   const responded = event.people.filter(p => event.responses[p.id]).length
   const bestId = [...scores].sort((a, b) => a.blocked - b.blocked || b.available - a.available)[0]?.slot.id
 
@@ -140,7 +160,8 @@ function EventPage({ id }: { id: string }) {
 
     {host && <section className="results">
       <div className="results-head"><div><span className="step">HOST VIEW</span><h2>Find your best time</h2><p>{responded} of {event.people.length} people have responded.</p></div><button className="share mobile-hide" onClick={copy}><Copy /> Share again</button></div>
-      <div className="summary-grid">{scores.map(score => <article className={`result-card ${score.slot.id === bestId ? 'best' : ''}`} key={score.slot.id}>{score.slot.id === bestId && <div className="best-label"><Crown /> Best option</div>}<div className="date-block"><span>{fmtDate(score.slot.date).split(' ')[0]}</span><strong>{new Date(`${score.slot.date}T12:00`).getDate()}</strong><small>{new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(new Date(`${score.slot.date}T12:00`))}</small></div><div className="result-info"><h3>{fmtTime(score.slot.start)} – {fmtTime(score.slot.end)}</h3><div className="response-faces">{event.people.map(p => { const s = event.responses[p.id]?.[score.slot.id]; return <span key={p.id} className={s || 'waiting'} title={`${p.name}: ${s || 'waiting'}`}>{s === 'available' ? <Check /> : s === 'unavailable' ? <X /> : s === 'tentative' ? '?' : p.name[0]}</span> })}</div><p>{score.available} available · {score.blocked} can't make it</p></div><button className="book" onClick={() => { const u = { ...event, bookedSlotId: score.slot.id }; saveEvent(u); setEvent(u) }}>{event.bookedSlotId === score.slot.id ? <><Check /> Booked</> : 'Book this time'}</button></article>)}</div>
+      <div className="summary-grid">{scores.map(score => <article className={`result-card ${score.slot.id === bestId ? 'best' : ''}`} key={score.slot.id}>{score.slot.id === bestId && <div className="best-label"><Crown /> Best option</div>}<div className="date-block"><span>{fmtDate(score.slot.date).split(' ')[0]}</span><strong>{new Date(`${score.slot.date}T12:00`).getDate()}</strong><small>{new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(new Date(`${score.slot.date}T12:00`))}</small></div><div className="result-info"><h3>{fmtTime(score.slot.start)} – {fmtTime(score.slot.end)}</h3><div className="response-faces">{event.people.map(p => { const s = event.responses[p.id]?.[score.slot.id]; return <span key={p.id} className={s || 'waiting'} title={`${p.name}: ${s || 'waiting'}`}>{s === 'available' ? <Check /> : s === 'unavailable' ? <X /> : s === 'tentative' ? '?' : p.name[0]}</span> })}</div><p>{score.available} available · {score.blocked} can't make it</p></div><button className="book" onClick={async () => { try { setEvent(await bookEvent(id, score.slot.id)) } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not book this time') } }}>{event.bookedSlotId === score.slot.id ? <><Check /> Booked</> : 'Book this time'}</button></article>)}</div>
+      {loadError && <p className="error">{loadError}</p>}
       <div className="legend"><span><i className="dot yes" /> Available</span><span><i className="dot maybe" /> If needed</span><span><i className="dot no" /> Can't make it</span><span><i className="dot wait" /> Waiting</span></div>
     </section>}
   </main>
