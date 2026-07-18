@@ -71,14 +71,14 @@ function Create() {
   const addPerson = () => {
     const name = personName.trim()
     if (!name || people.some(p => p.name.toLowerCase() === name.toLowerCase())) return
-    setPeople([...people, { id: makeId(), name, optional: false }]); setPersonName('')
+    setPeople([...people, { id: makeId(), name, optional: false, excluded: false }]); setPersonName('')
   }
   const create = async () => {
     if (!title.trim() || !creator.trim() || !people.length || !slots.length || slots.some(s => !s.date || !s.start || !s.end)) {
       setError('Add an event name, your name, at least one guest and one complete time option.'); return
     }
     const id = makeId()
-    const host: Person = { id: makeId(), name: creator.trim(), optional: false }
+    const host: Person = { id: makeId(), name: creator.trim(), optional: false, excluded: false }
     const hostAvailability = Object.fromEntries(slots.map(slot => [slot.id, 'available' as Status]))
     const plan: EventPlan = { id, title: title.trim(), creator: creator.trim(), location: locationName.trim(), note: note.trim(), people: [host, ...people], slots, responses: { [host.id]: hostAvailability }, createdAt: new Date().toISOString() }
     try {
@@ -105,7 +105,7 @@ function Create() {
         <h2><span className="icon-box blue"><Users /></span> Who's invited?</h2>
         <p className="section-copy">Add everyone you'd like to join. They'll choose their name when responding.</p>
         <div className="add-row"><input value={personName} onChange={e => setPersonName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addPerson()} placeholder="Type a name" /><button onClick={addPerson}><Plus size={18} /> Add</button></div>
-        <div className="people-list">{people.map((person, i) => <div className="person" key={person.id}><span className="avatar">{person.name[0].toUpperCase()}</span><strong>{person.name}</strong><label className="optional"><input type="checkbox" checked={person.optional} onChange={() => setPeople(people.map(p => p.id === person.id ? { ...p, optional: !p.optional } : p))} /> Optional</label><button className="icon-button" onClick={() => setPeople(people.filter(p => p.id !== person.id))}><X size={17} /></button></div>)}</div>
+        <div className="people-list">{people.map(person => <div className="person" key={person.id}><span className="avatar">{person.name[0].toUpperCase()}</span><strong>{person.name}</strong><button className="icon-button" onClick={() => setPeople(people.filter(p => p.id !== person.id))}><X size={17} /></button></div>)}</div>
         {!people.length && <div className="empty-mini"><Users /><span>Your guest list will appear here</span></div>}
       </section>
       <section className="card form-card wide">
@@ -132,6 +132,8 @@ function EventPage({ id }: { id: string }) {
   const [loadError, setLoadError] = useState('')
   const [selectedPerson, setSelectedPerson] = useState('')
   const [draft, setDraft] = useState<Record<string, Status>>({})
+  const [optional, setOptional] = useState(false)
+  const [excluded, setExcluded] = useState(false)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
   const host = isHost(id)
@@ -140,9 +142,16 @@ function EventPage({ id }: { id: string }) {
     setLoading(true)
     getEvent(id).then(setEvent).catch(cause => setLoadError(cause instanceof Error ? cause.message : 'Event not found')).finally(() => setLoading(false))
   }, [id])
-  useEffect(() => { if (selectedPerson && event) setDraft(event.responses[selectedPerson] || {}) }, [selectedPerson, event])
+  useEffect(() => {
+    if (selectedPerson && event) {
+      setDraft(event.responses[selectedPerson] || {})
+      const person = event.people.find(person => person.id === selectedPerson)
+      setOptional(person?.optional || false)
+      setExcluded(person?.excluded || false)
+    }
+  }, [selectedPerson, event])
   const scores = useMemo(() => event?.slots.map(slot => {
-    const required = event.people.filter(p => !p.optional)
+    const required = event.people.filter(p => !p.optional && !p.excluded)
     const available = required.filter(p => event.responses[p.id]?.[slot.id] === 'available').length
     const blocked = required.filter(p => event.responses[p.id]?.[slot.id] === 'unavailable').length
     return { slot, available, blocked, total: required.length }
@@ -153,7 +162,7 @@ function EventPage({ id }: { id: string }) {
   const copy = async () => { await navigator.clipboard.writeText(eventUrl(id)); setCopied(true); setTimeout(() => setCopied(false), 1800) }
   const submit = async () => {
     try {
-      const updated = await saveResponse(id, selectedPerson, draft)
+      const updated = await saveResponse(id, selectedPerson, draft, optional, excluded)
       setEvent(updated); setSaved(true); setTimeout(() => setSaved(false), 1800)
     } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not save your response') }
   }
@@ -170,15 +179,15 @@ function EventPage({ id }: { id: string }) {
 
     {!host && <section className="response card">
       <div className="response-head"><div><span className="step">YOUR AVAILABILITY</span><h2>Which one are you?</h2></div><span className="progress-count">{responded} of {event.people.length} replied</span></div>
-      <select value={selectedPerson} onChange={e => setSelectedPerson(e.target.value)}><option value="">Choose your name…</option>{event.people.map(p => <option key={p.id} value={p.id}>{p.name}{p.optional ? ' (optional)' : ''}</option>)}</select>
-      {selectedPerson && <div className="availability"><p>Tap your availability for each option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'tentative', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<button className="primary submit" disabled={Object.keys(draft).length !== event.slots.length} onClick={submit}>{saved ? <><Check /> Saved!</> : <>Save my response <ChevronRight /></>}</button></div>}
+      <select value={selectedPerson} onChange={e => setSelectedPerson(e.target.value)}><option value="">Choose your name…</option>{event.people.map(p => <option key={p.id} value={p.id}>{p.name}{p.excluded ? ' (not attending)' : p.optional ? ' (optional)' : ''}</option>)}</select>
+      {selectedPerson && <div className="availability"><label className="optional"><input type="checkbox" checked={excluded} onChange={e => setExcluded(e.target.checked)} /> I can't attend — exclude me from scheduling</label>{!excluded && <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label><p>Tap your availability for each option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'tentative', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}</>}<button className="primary submit" disabled={!excluded && Object.keys(draft).length !== event.slots.length} onClick={submit}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div>}
     </section>}
 
     {host && <section className="results">
-      <div className="results-head"><div><span className="step">HOST VIEW</span><h2>Find your best time</h2><p>{responded} of {event.people.length} people have responded.</p></div><button className="share mobile-hide" onClick={copy}><Copy /> Share again</button></div>
-      <div className="summary-grid">{scores.map(score => <article className={`result-card ${score.slot.id === bestId ? 'best' : ''}`} key={score.slot.id}>{score.slot.id === bestId && <div className="best-label"><Crown /> Best option</div>}<div className="date-block"><span>{fmtDate(score.slot.date).split(' ')[0]}</span><strong>{new Date(`${score.slot.date}T12:00`).getDate()}</strong><small>{new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(new Date(`${score.slot.date}T12:00`))}</small></div><div className="result-info"><h3>{fmtTime(score.slot.start)} – {fmtTime(score.slot.end)}</h3><div className="response-faces">{event.people.map(p => { const s = event.responses[p.id]?.[score.slot.id]; return <span key={p.id} className={s || 'waiting'} title={`${p.name}: ${s || 'waiting'}`}>{s === 'available' ? <Check /> : s === 'unavailable' ? <X /> : s === 'tentative' ? '?' : p.name[0]}</span> })}</div><p>{score.available} available · {score.blocked} can't make it</p></div><button className="book" onClick={async () => { try { setEvent(await bookEvent(id, score.slot.id)) } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not book this time') } }}>{event.bookedSlotId === score.slot.id ? <><Check /> Booked</> : 'Book this time'}</button></article>)}</div>
+      <div className="results-head"><div><span className="step">HOST VIEW</span><h2>Find your best time</h2><p>{responded} of {event.people.length} people have responded.</p>{event.people.some(person => person.optional && !person.excluded) && <p>Optional attendees: {event.people.filter(person => person.optional && !person.excluded).map(person => person.name).join(', ')}</p>}</div><button className="share mobile-hide" onClick={copy}><Copy /> Share again</button></div>
+      <div className="summary-grid">{scores.map(score => <article className={`result-card ${score.slot.id === bestId ? 'best' : ''}`} key={score.slot.id}>{score.slot.id === bestId && <div className="best-label"><Crown /> Best option</div>}<div className="date-block"><span>{fmtDate(score.slot.date).split(' ')[0]}</span><strong>{new Date(`${score.slot.date}T12:00`).getDate()}</strong><small>{new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(new Date(`${score.slot.date}T12:00`))}</small></div><div className="result-info"><h3>{fmtTime(score.slot.start)} – {fmtTime(score.slot.end)}</h3><div className="response-faces">{event.people.map(p => { const s = event.responses[p.id]?.[score.slot.id]; return p.excluded ? <span key={p.id} className="unavailable" title={`${p.name}: not attending`}><X /></span> : <span key={p.id} className={s || 'waiting'} title={`${p.name}${p.optional ? ' (optional)' : ''}: ${s || 'waiting'}`}>{s === 'available' ? <Check /> : s === 'unavailable' ? <X /> : s === 'tentative' ? '?' : p.name[0]}</span> })}</div><p>{score.available} available · {score.blocked} can't make it</p></div><button className="book" onClick={async () => { try { setEvent(await bookEvent(id, score.slot.id)) } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not book this time') } }}>{event.bookedSlotId === score.slot.id ? <><Check /> Booked</> : 'Book this time'}</button></article>)}</div>
       {loadError && <p className="error">{loadError}</p>}
-      <div className="legend"><span><i className="dot yes" /> Available</span><span><i className="dot maybe" /> If needed</span><span><i className="dot no" /> Can't make it</span><span><i className="dot wait" /> Waiting</span></div>
+      <div className="legend"><span><i className="dot yes" /> Available</span><span><i className="dot maybe" /> If needed</span><span><i className="dot no" /> Can't make it / not attending</span><span><i className="dot wait" /> Waiting</span></div>
     </section>}
   </main>
 }

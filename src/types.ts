@@ -4,6 +4,7 @@ export interface Person {
   id: string
   name: string
   optional: boolean
+  excluded: boolean
 }
 
 export interface Slot {

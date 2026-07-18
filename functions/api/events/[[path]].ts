@@ -6,7 +6,7 @@ interface D1PreparedStatement {
 }
 interface D1Database { prepare(query: string): D1PreparedStatement }
 interface Env { abcd: D1Database }
-interface Person { id: string; name: string; optional: boolean }
+interface Person { id: string; name: string; optional: boolean; excluded?: boolean }
 interface Slot { id: string; date: string; start: string; end: string }
 interface EventPlan {
   id: string; title: string; note: string; location: string; creator: string
@@ -48,11 +48,16 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (method === 'PUT' && action === 'responses' && personId) {
       const event = await readEvent(env.abcd, id)
       if (!event) return json({ error: 'Event not found' }, 404)
-      if (!event.people.some(person => person.id === personId)) return json({ error: 'Unknown guest' }, 400)
-      const body = await request.json() as { availability?: Record<string, unknown> }
+      const person = event.people.find(person => person.id === personId)
+      if (!person) return json({ error: 'Unknown guest' }, 400)
+      const body = await request.json() as { availability?: Record<string, unknown>; optional?: boolean; excluded?: boolean }
       const availability = body.availability || {}
-      if (event.slots.some(slot => !validStatus(availability[slot.id]))) return json({ error: 'Respond to every time option' }, 400)
-      event.responses[personId] = availability as EventPlan['responses'][string]
+      const optional = body.optional === true
+      const excluded = body.excluded === true
+      if (!excluded && event.slots.some(slot => !validStatus(availability[slot.id]))) return json({ error: 'Respond to every time option' }, 400)
+      person.optional = optional
+      person.excluded = excluded
+      event.responses[personId] = excluded ? {} : availability as EventPlan['responses'][string]
       await env.abcd.prepare('UPDATE events SET data = ? WHERE id = ?').bind(JSON.stringify(event), id).run()
       return json({ event })
     }
