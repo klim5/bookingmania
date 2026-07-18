@@ -7,10 +7,9 @@ interface D1PreparedStatement {
 interface D1Database { prepare(query: string): D1PreparedStatement }
 interface Env { abcd: D1Database }
 interface Person { id: string; name: string; optional: boolean; excluded?: boolean }
-interface Slot { id: string; date: string; start: string; end: string }
+interface Slot { id: string; date: string; start: string; end: string; tags?: string[] }
 interface EventPlan {
   id: string; title: string; note: string; location: string; creator: string
-  tags?: string[]
   people: Person[]; slots: Slot[]
   responses: Record<string, Record<string, 'available' | 'tentative' | 'unavailable'>>
   createdAt: string; bookedSlotId?: string
