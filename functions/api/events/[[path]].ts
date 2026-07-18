@@ -58,6 +58,23 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       return json({ event, personId: person.id }, 201)
     }
 
+    if (method === 'POST' && action === 'slots') {
+      const hostToken = request.headers.get('X-Host-Token')
+      const row = await env.abcd.prepare('SELECT data, host_token FROM events WHERE id = ?').bind(id).first<{ data: string; host_token: string }>()
+      if (!row) return json({ error: 'Event not found' }, 404)
+      if (!hostToken || hostToken !== row.host_token) return json({ error: 'Only the host can add time options' }, 403)
+      const body = await request.json() as { slot?: Slot }
+      const slot = body.slot
+      if (!slot?.id || !slot.date || !slot.start || !slot.end) return json({ error: 'Complete the new time option' }, 400)
+      const event = JSON.parse(row.data) as EventPlan
+      if (event.slots.some(existing => existing.id === slot.id)) return json({ error: 'Time option already exists' }, 409)
+      event.slots.push(slot)
+      const host = event.people[0]
+      if (host) event.responses[host.id] = { ...(event.responses[host.id] || {}), [slot.id]: 'available' }
+      await env.abcd.prepare('UPDATE events SET data = ? WHERE id = ?').bind(JSON.stringify(event), id).run()
+      return json({ event }, 201)
+    }
+
     if (method === 'PUT' && action === 'responses' && personId) {
       const event = await readEvent(env.abcd, id)
       if (!event) return json({ error: 'Event not found' }, 404)
@@ -67,7 +84,9 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       const availability = body.availability || {}
       const optional = body.optional === true
       const excluded = body.excluded === true
-      if (!excluded && event.slots.some(slot => !validStatus(availability[slot.id]))) return json({ error: 'Respond to every time option' }, 400)
+      const answeredSlots = event.slots.filter(slot => availability[slot.id] !== undefined)
+      if (!excluded && !answeredSlots.length) return json({ error: 'Respond to at least one time option' }, 400)
+      if (answeredSlots.some(slot => !validStatus(availability[slot.id]))) return json({ error: 'Invalid availability response' }, 400)
       person.optional = optional
       person.excluded = excluded
       event.responses[personId] = excluded ? {} : availability as EventPlan['responses'][string]

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, Clock3, Copy, Crown, Link2, MapPin, Plus, Sparkles, Trash2, Users, X } from 'lucide-react'
 import type { EventPlan, Person, Slot, Status } from './types'
-import { addPerson, bookEvent, createEvent, eventUrl, getEvent, isHost, makeId, saveResponse } from './store'
+import { addPerson, addTimeOption, bookEvent, createEvent, eventUrl, getEvent, isHost, makeId, saveResponse } from './store'
 
 type Route = { page: 'home' } | { page: 'create' } | { page: 'event'; id: string }
 const route = (): Route => {
@@ -138,6 +138,9 @@ function EventPage({ id }: { id: string }) {
   const [excluded, setExcluded] = useState(false)
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [showAddTime, setShowAddTime] = useState(false)
+  const [newSlot, setNewSlot] = useState(() => ({ date: new Date(Date.now() + 86400000).toISOString().slice(0, 10), start: '18:00', end: '19:30' }))
+  const [addingTime, setAddingTime] = useState(false)
   const host = isHost(id)
 
   useEffect(() => {
@@ -177,13 +180,26 @@ function EventPage({ id }: { id: string }) {
       setAddingGuest(false)
     }
   }
+  const addHostTime = async () => {
+    if (!newSlot.date || !newSlot.start || !newSlot.end) return
+    try {
+      setAddingTime(true); setLoadError('')
+      setEvent(await addTimeOption(id, { id: makeId(), ...newSlot }))
+      setShowAddTime(false)
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : 'Could not add the time option')
+    } finally {
+      setAddingTime(false)
+    }
+  }
   const submit = async (exclude = excluded) => {
     try {
       const updated = await saveResponse(id, selectedPerson, draft, optional, exclude)
       setEvent(updated); setSaved(true); setTimeout(() => setSaved(false), 1800)
     } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not save your response') }
   }
-  const responded = event.people.filter(p => event.responses[p.id]).length
+  const invitees = event.people.slice(1)
+  const responded = invitees.filter(p => event.responses[p.id]).length
   const bestId = [...scores].sort((a, b) => a.blocked - b.blocked || b.available - a.available)[0]?.slot.id
 
   return <main className="event-shell">
@@ -195,17 +211,18 @@ function EventPage({ id }: { id: string }) {
     </section>
 
     {!host && <section className="response card">
-      <div className="response-head"><div><span className="step">YOUR AVAILABILITY</span><h2>What's your name?</h2></div><span className="progress-count">{responded} of {event.people.length} replied</span></div>
-      <div className="attendee-picker">{event.people.map(person => <button key={person.id} className={selectedPerson === person.id ? 'selected' : ''} onClick={() => setSelectedPerson(person.id)}><span className="avatar">{person.name[0].toUpperCase()}</span><span>{person.name}<small>{person.excluded ? 'Not attending' : person.optional ? 'Optional' : event.responses[person.id] ? 'Responded' : 'Waiting'}</small></span>{selectedPerson === person.id && <Check />}</button>)}</div>
+      <div className="response-head"><div><span className="step">YOUR AVAILABILITY</span><h2>What's your name?</h2></div><span className="progress-count">{responded} of {invitees.length} replied</span></div>
+      <div className="attendee-picker">{invitees.map(person => <button key={person.id} className={selectedPerson === person.id ? 'selected' : ''} onClick={() => setSelectedPerson(person.id)}><span className="avatar">{person.name[0].toUpperCase()}</span><span>{person.name}<small>{person.excluded ? 'Not attending' : person.optional ? 'Optional' : event.responses[person.id] ? 'Responded' : 'Waiting'}</small></span>{selectedPerson === person.id && <Check />}</button>)}</div>
       {!selectedPerson && <div className="guest-name-row"><span>Not on the list?</span><div><input value={newGuestName} onChange={e => setNewGuestName(e.target.value)} onKeyDown={e => e.key === 'Enter' && joinGuestList()} placeholder="Add your name" /><button className="secondary" disabled={addingGuest || !newGuestName.trim()} onClick={joinGuestList}><Plus size={16} /> {addingGuest ? 'Adding…' : 'Add me'}</button></div></div>}
-      {selectedPerson && <div className="availability">{excluded ? <div className="excluded-rsvp"><p>You're currently marked as not attending.</p><button className="secondary" onClick={() => setExcluded(false)}>Change my response</button></div> : <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label><p>Tap your availability for each option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'tentative', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<div className="rsvp-actions"><button className="decline-rsvp" onClick={() => submit(true)}>I can't attend</button><button className="primary" disabled={Object.keys(draft).length !== event.slots.length} onClick={() => submit()}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div></>}</div>}
+      {selectedPerson && <div className="availability">{excluded ? <div className="excluded-rsvp"><p>You're currently marked as not attending.</p><button className="secondary" onClick={() => setExcluded(false)}>Change my response</button></div> : <><label className="optional"><input type="checkbox" checked={optional} onChange={e => setOptional(e.target.checked)} /> My attendance is optional — don't let my availability block the group</label><p>Choose your availability for at least one option.</p>{event.slots.map(slot => <div className="availability-row" key={slot.id}><div className="slot-label"><strong>{fmtLong(slot.date)}</strong><span><Clock3 /> {fmtTime(slot.start)} – {fmtTime(slot.end)}</span></div><div className="statuses">{(['available', 'unavailable'] as Status[]).map(s => <StatusButton key={s} status={s} active={draft[slot.id] === s} onClick={() => setDraft({ ...draft, [slot.id]: s })} />)}</div></div>)}<div className="rsvp-actions"><button className="decline-rsvp" onClick={() => submit(true)}>I can't attend</button><button className="primary" disabled={Object.keys(draft).length === 0} onClick={() => submit()}>{saved ? <><Check /> Saved!</> : <>Save my RSVP <ChevronRight /></>}</button></div></>}</div>}
     </section>}
 
     {host && <section className="results">
-      <div className="results-head"><div><span className="step">HOST VIEW</span><h2>Find your best time</h2><p>{responded} of {event.people.length} people have responded.</p>{event.people.some(person => person.optional && !person.excluded) && <p>Optional attendees: {event.people.filter(person => person.optional && !person.excluded).map(person => person.name).join(', ')}</p>}</div><button className="share mobile-hide" onClick={copy}><Copy /> Share again</button></div>
+      <div className="results-head"><div><span className="step">HOST VIEW</span><h2>Find your best time</h2><p>{responded} of {invitees.length} invitees have responded.</p>{invitees.some(person => person.optional && !person.excluded) && <p>Optional attendees: {invitees.filter(person => person.optional && !person.excluded).map(person => person.name).join(', ')}</p>}</div><button className="share mobile-hide" onClick={copy}><Copy /> Share again</button></div>
+      <div className="host-time-actions">{showAddTime ? <div className="host-time-form"><label>Date<input type="date" value={newSlot.date} onChange={event => setNewSlot({ ...newSlot, date: event.target.value })} />{newSlot.date && <small className="date-preview">{fmtRelativeDate(newSlot.date)}</small>}</label><label>Starts<input type="time" value={newSlot.start} onChange={event => setNewSlot({ ...newSlot, start: event.target.value })} /></label><label>Ends<input type="time" value={newSlot.end} onChange={event => setNewSlot({ ...newSlot, end: event.target.value })} /></label><div><button className="secondary" onClick={() => setShowAddTime(false)}>Cancel</button><button className="primary" disabled={addingTime || !newSlot.date || !newSlot.start || !newSlot.end} onClick={addHostTime}>{addingTime ? 'Adding…' : 'Add time'}</button></div></div> : <button className="secondary add-host-time" onClick={() => setShowAddTime(true)}><Plus size={16} /> Add another time</button>}</div>
       <div className="summary-grid">{scores.map(score => <article className={`result-card ${score.slot.id === bestId ? 'best' : ''}`} key={score.slot.id}>{score.slot.id === bestId && <div className="best-label"><Crown /> Best option</div>}<div className="date-block"><span>{fmtDate(score.slot.date).split(' ')[0]}</span><strong>{new Date(`${score.slot.date}T12:00`).getDate()}</strong><small>{new Intl.DateTimeFormat('en-AU', { month: 'short' }).format(new Date(`${score.slot.date}T12:00`))}</small></div><div className="result-info"><h3>{fmtTime(score.slot.start)} – {fmtTime(score.slot.end)}</h3><p className="host-date-preview">{fmtRelativeDate(score.slot.date)}</p><div className="response-faces">{event.people.map(p => { const s = event.responses[p.id]?.[score.slot.id]; return p.excluded ? <span key={p.id} className="unavailable" title={`${p.name}: not attending`}><X /></span> : <span key={p.id} className={s || 'waiting'} title={`${p.name}${p.optional ? ' (optional)' : ''}: ${s || 'waiting'}`}>{s === 'available' ? <Check /> : s === 'unavailable' ? <X /> : s === 'tentative' ? '?' : p.name[0]}</span> })}</div><p>{score.available} available · {score.blocked} can't make it</p></div><button className="book" onClick={async () => { try { setEvent(await bookEvent(id, score.slot.id)) } catch (cause) { setLoadError(cause instanceof Error ? cause.message : 'Could not book this time') } }}>{event.bookedSlotId === score.slot.id ? <><Check /> Booked</> : 'Book this time'}</button></article>)}</div>
       {loadError && <p className="error">{loadError}</p>}
-      <div className="legend"><span><i className="dot yes" /> Available</span><span><i className="dot maybe" /> If needed</span><span><i className="dot no" /> Can't make it / not attending</span><span><i className="dot wait" /> Waiting</span></div>
+      <div className="legend"><span><i className="dot yes" /> Available</span><span><i className="dot no" /> Can't make it / not attending</span><span><i className="dot wait" /> Waiting</span></div>
     </section>}
   </main>
 }

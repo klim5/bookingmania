@@ -161,9 +161,58 @@
   white-space: nowrap;
 }
 
+.host-time-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.add-host-time {
+  padding: 11px 14px;
+}
+
+.host-time-form {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  align-items: start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+
+.host-time-form label {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.host-time-form input {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #d8d9d3;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.host-time-form > div {
+  display: flex;
+  gap: 8px;
+  padding-top: 20px;
+}
+
+.host-time-form .secondary {
+  padding: 0 13px;
+}
+
 @media (max-width: 720px) {
   .attendee-picker {
     grid-template-columns: 1fr;
+  }
+
+  .statuses {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .rsvp-actions {
@@ -174,5 +223,18 @@
   .excluded-rsvp {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .host-time-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .host-time-form label:first-child,
+  .host-time-form > div {
+    grid-column: 1 / -1;
+  }
+
+  .host-time-form > div {
+    padding-top: 0;
   }
 }

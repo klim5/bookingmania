@@ -45,6 +45,12 @@ export async function saveResponse(eventId: string, personId: string, availabili
   return result.event
 }
 
+export async function addTimeOption(eventId: string, slot: EventPlan['slots'][number]) {
+  const hostToken = localStorage.getItem(hostKey(eventId)) || ''
+  const result = await api<{ event: EventPlan }>(`/${eventId}/slots`, { method: 'POST', headers: { 'X-Host-Token': hostToken }, body: JSON.stringify({ slot }) })
+  return result.event
+}
+
 export async function bookEvent(eventId: string, slotId: string) {
   const hostToken = localStorage.getItem(hostKey(eventId)) || ''
   const result = await api<{ event: EventPlan }>(`/${eventId}/book`, { method: 'PUT', headers: { 'X-Host-Token': hostToken }, body: JSON.stringify({ slotId }) })
