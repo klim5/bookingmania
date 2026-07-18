@@ -59,7 +59,7 @@ function TimeTags({ tags = [] }: { tags?: EventTag[] }) {
   return tags.length ? <div className="time-tags">{tags.map(tag => { const option = tagOptions.find(item => item.name === tag); if (!option) return null; const Icon = option.icon; return <span className={tagClass(tag)} key={tag}><Icon /> {tag}</span> })}</div> : null
 }
 function ResponseChoices({ event, slotId, preview }: { event: EventPlan; slotId: string; preview?: { personId: string; availability: Record<string, Status>; excluded: boolean } }) {
-  return <div className="response-choices">{event.people.map((person, index) => { const isPreview = person.id === preview?.personId; const personExcluded = isPreview ? preview.excluded : person.excluded; const status = personExcluded ? 'excluded' : (isPreview ? preview.availability[slotId] : event.responses[person.id]?.[slotId]) || 'waiting'; const labels = { unavailable: "Can't make it", tentative: 'If needed', available: 'Works for me', preferred: 'Preferred', excluded: 'Not attending', waiting: 'Waiting' }; const colours = personColours(event.id, index); return <span className={status} key={person.id}><i className="person-colour-dot" style={{ backgroundColor: colours.accent }} aria-hidden="true" /><b>{person.name}</b><small>{labels[status]}</small></span> })}</div>
+  return <div className="response-choices">{event.people.map((person, index) => { const isPreview = person.id === preview?.personId; const personExcluded = isPreview ? preview.excluded : person.excluded; const status = personExcluded ? 'excluded' : (isPreview ? preview.availability[slotId] : event.responses[person.id]?.[slotId]) || 'waiting'; const labels = { unavailable: "Can't make it", tentative: 'Potentially', available: 'Works for me', preferred: 'Preferred', excluded: 'Not attending', waiting: 'Waiting' }; const colours = personColours(event.id, index); return <span className={status} key={person.id}><i className="person-colour-dot" style={{ backgroundColor: colours.accent }} aria-hidden="true" /><b>{person.name}</b><small>{labels[status]}</small></span> })}</div>
 }
 const fmtRelativeDate = (date: string) => {
   const target = new Date(`${date}T12:00:00`)
@@ -167,7 +167,7 @@ function Create() {
 
 function StatusButton({ status, active, onClick }: { status: Status; active: boolean; onClick: () => void }) {
   const icons = { unavailable: <X />, tentative: <span className="status-icon">~</span>, available: <Check />, preferred: <Sparkles /> }
-  const labels = { unavailable: "Can't make it", tentative: 'If needed', available: 'Works for me', preferred: 'Preferred' }
+  const labels = { unavailable: "Can't make it", tentative: 'Potentially', available: 'Works for me', preferred: 'Preferred' }
   return <button className={`status ${status} ${active ? 'active' : ''}`} onClick={onClick}>{icons[status]}<span>{labels[status]}</span></button>
 }
 
