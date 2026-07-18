@@ -20,7 +20,16 @@ const validStatus = (value: unknown) => ['available', 'tentative', 'unavailable'
 
 async function readEvent(db: D1Database, id: string) {
   const row = await db.prepare('SELECT data FROM events WHERE id = ?').bind(id).first<{ data: string }>()
-  return row ? JSON.parse(row.data) as EventPlan : null
+  if (!row) return null
+
+  const event = JSON.parse(row.data) as EventPlan
+  const host = event.people[0]
+  if (host) {
+    host.optional = false
+    host.excluded = false
+    event.responses[host.id] = Object.fromEntries(event.slots.map(slot => [slot.id, 'available']))
+  }
+  return event
 }
 
 export const onRequest: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -32,6 +41,10 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       const body = await request.json() as { event?: EventPlan; hostToken?: string }
       const event = body.event
       if (!event || !body.hostToken || !event.id || !event.title || !event.people?.length || !event.slots?.length) return json({ error: 'Invalid event' }, 400)
+      const host = event.people[0]
+      host.optional = false
+      host.excluded = false
+      event.responses[host.id] = Object.fromEntries(event.slots.map(slot => [slot.id, 'available']))
       await env.abcd.prepare('INSERT INTO events (id, data, host_token) VALUES (?, ?, ?)')
         .bind(event.id, JSON.stringify(event), body.hostToken).run()
       return json({ event }, 201)
