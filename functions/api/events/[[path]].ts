@@ -48,6 +48,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (method === 'POST' && action === 'people') {
       const event = await readEvent(env.abcd, id)
       if (!event) return json({ error: 'Event not found' }, 404)
+      if (event.bookedSlotId) return json({ error: 'This event has already been booked' }, 409)
       const body = await request.json() as { name?: string }
       const name = body.name?.trim()
       if (!name) return json({ error: 'Enter your name' }, 400)
@@ -67,6 +68,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       const slot = body.slot
       if (!slot?.id || !slot.date || !slot.start || !slot.end) return json({ error: 'Complete the new time option' }, 400)
       const event = JSON.parse(row.data) as EventPlan
+      if (event.bookedSlotId) return json({ error: 'Unbook the event before adding another time' }, 409)
       if (event.slots.some(existing => existing.id === slot.id)) return json({ error: 'Time option already exists' }, 409)
       event.slots.push(slot)
       const host = event.people[0]
@@ -78,6 +80,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
     if (method === 'PUT' && action === 'responses' && personId) {
       const event = await readEvent(env.abcd, id)
       if (!event) return json({ error: 'Event not found' }, 404)
+      if (event.bookedSlotId) return json({ error: 'This event has been booked and RSVPs are closed' }, 409)
       const person = event.people.find(person => person.id === personId)
       if (!person) return json({ error: 'Unknown guest' }, 400)
       const body = await request.json() as { availability?: Record<string, unknown>; optional?: boolean; excluded?: boolean }
@@ -102,7 +105,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, params }) =>
       const body = await request.json() as { slotId?: string }
       const event = JSON.parse(row.data) as EventPlan
       if (!body.slotId || !event.slots.some(slot => slot.id === body.slotId)) return json({ error: 'Unknown time option' }, 400)
-      event.bookedSlotId = body.slotId
+      event.bookedSlotId = event.bookedSlotId === body.slotId ? undefined : body.slotId
       await env.abcd.prepare('UPDATE events SET data = ? WHERE id = ?').bind(JSON.stringify(event), id).run()
       return json({ event })
     }
